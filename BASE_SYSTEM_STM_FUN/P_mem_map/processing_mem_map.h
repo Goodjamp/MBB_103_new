@@ -94,7 +94,7 @@ typedef ERROR_mem (*P_mem_map_processing_check_address)(void*);
 typedef struct
 {
 	unsigned char date[MAX_DATA_OBJ_MODBUS];
-	unsigned char flag;
+	//unsigned char flag;
 } S_proces_object_modbus;
 
 
