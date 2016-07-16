@@ -12,6 +12,7 @@
 #include "processing_mem_map.h"
 
 #define DEV_4                mesurement
+// git
 
 // Общее количество аналоговых входов модуля МВВ
 #define TOTAL_NUM_MES            1
