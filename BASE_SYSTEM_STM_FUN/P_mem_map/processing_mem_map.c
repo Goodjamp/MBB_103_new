@@ -78,61 +78,61 @@ u8 processing_mem_map_init_mem_map(void) {
 #endif
 #ifdef DEV_4
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
-	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_4)(&s_address_oper_data.USER_ADDRESS_FIELD(s,DEV_4),temp_address);
+	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_4,temp_address);
 
 #endif
 #ifdef DEV_5
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
-	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_5)(&s_address_oper_data.USER_ADDRESS_FIELD(s,DEV_5),temp_address);
+	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_5,temp_address);
 
 #endif
 #ifdef DEV_6
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
-	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_6)(&s_address_oper_data.USER_ADDRESS_FIELD(s,DEV_6));
+	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_6,temp_address);
 #endif
 #ifdef DEV_7
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
-	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_7)(&s_address_oper_data.USER_ADDRESS_FIELD(s,DEV_7),temp_address);
+	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_7,temp_address);
 
 #endif
 #ifdef DEV_8
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
-	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_8)(&s_address_oper_data.USER_ADDRESS_FIELD(s,DEV_8),temp_address);
+	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_8,temp_address);
 
 #endif
 #ifdef DEV_9
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
-	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_9)(&s_address_oper_data.USER_ADDRESS_FIELD(s,DEV_9),temp_address);
+	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_9,temp_address);
 
 #endif
 #ifdef DEV_10
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
-	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_10)(&s_address_oper_data.USER_ADDRESS_FIELD(s,DEV_10),temp_address);
+	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_10,temp_address);
 
 #endif
 #ifdef DEV_11
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
-	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_11)(&s_address_oper_data.USER_ADDRESS_FIELD(s,DEV_11),temp_address);
+	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_11,temp_address);
 
 #endif
 #ifdef DEV_12
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
-	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_12)(&s_address_oper_data.USER_ADDRESS_FIELD(s,DEV_12),temp_address);
+	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_12,temp_address);
 
 #endif
 #ifdef DEV_13
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
-	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_13)(&s_address_oper_data.USER_ADDRESS_FIELD(s,DEV_13),temp_address);
+	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_13,temp_address);
 
 #endif
 #ifdef DEV_14
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
-	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_14)(&s_address_oper_data.USER_ADDRESS_FIELD(s,DEV_14),temp_address);
+	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_14,temp_address);
 
 #endif
 #ifdef DEV_15
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
-	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_15)(&s_address_oper_data.USER_ADDRESS_FIELD(s,DEV_15),temp_address);
+	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_15,temp_address);
 
 #endif
 
