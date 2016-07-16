@@ -214,6 +214,7 @@ void t_Modbus_MASTER(void *p_task_par) {
 	ptaskparameters = ((S_modbus_tsk_par*)p_task_par)->ps_task_parameters;
 	number_port =  ((S_modbus_tsk_par*)p_task_par)->num_modbus;
 	// основной цикл задачи
+	vTaskDelay(500); //таймаут переда стартом всех задач, для валидации данных в картепамяти
 	while (1) {
 
 		for (number_req = 0;number_req< ps_connectmodbus_global[number_port].number_of_pribor;number_req++) //циклический опрос запросами порта
@@ -483,7 +484,7 @@ void t_Modbus_SLAVE(void *p_task_par) {
 
 
 	while (ReadUSART(ptaskparameters->RdUSART, (u8*) ps_modbus_req_input, 1, 1)) {	} // очищаю буффер приема
-
+	vTaskDelay(500); //таймаут переда стартом всех задач, для валидации данных в картепамяти
 	while (1) {
 
 		if (ReadUSART(ptaskparameters->RdUSART, (u8*) ps_modbus_req_input, 8,20) != 8) { //считываю из стека USART. Если размер прочитаной посылки не 8 байт, повторяю чтение

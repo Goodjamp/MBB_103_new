@@ -288,7 +288,7 @@ USART_errort  ConfigureUSART(const S_port_config *ps_port_unit_config, USART_Typ
 	/* Configure USART Tx  as alternate function push-pull */
 	GPIO_InitStructure.GPIO_Pin = GPIO_USART_pin_TX;//
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_OD;
 	GPIO_Init(GPIO_USART_port_TX, &GPIO_InitStructure);
 
 	/* Configure USART Rx  as input floating */

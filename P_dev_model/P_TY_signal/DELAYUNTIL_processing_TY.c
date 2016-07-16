@@ -14,10 +14,14 @@ portBASE_TYPE prioryty_take_semaphore_ty;
 S_ty_rel_out s_rel_out[TOTAL_NUM_TY];
 //масив структур пинов и портов проверки обмоток релле
 S_ty_rel_out s_coil_check[TOTAL_NUM_TY];
-//Структура глобальных настроек пользователя модуля ТС
+//Структура глобальных настроек пользователя модуля ТУ
 S_TY_user_config *ps_TY_user_config;
-// Структура описания и выполнения команды ТУ
+// Структура описания и выполнения команды ТУ ( для обработки задачей ТУ)
 S_ty_operation s_TY_operation;
+// Структура описания и выполнения команды ТУ ( для MODBUS)
+S_ty_operation s_TY_operation_modbus_set;
+// Семафор для организации критической секции считвания структуры описания и выполнения команды ТУ
+xSemaphoreHandle SemaphoreHandle_read_ty_set;
 //Структура настройки циклической проверки состояния иодуля ТУ
 S_ty_cycling_check s_cycling_check;
 // Структура регистров-статусов поточного состояния модуля ТУ
@@ -315,31 +319,39 @@ TY_REZ_CHECK processing_TY_signal_check_coil(void) {
 	//
 	// Выбираю котушки исходя из условия от обратного: если поточный выход ТУ соответствует условиям НЕ попадания в
 	// список - перехожу к проверке следующего выхода
-
 	for (counter = 0,s_ty_coil_check_grup.num_check_TY=0; counter < TOTAL_NUM_TY; counter++) {
-		if ( //---если в очереди на выполнение стоит команда,  "И"
-		     //---тип поточного проверяимого выхода ТУ DOUBLE_POSITION, "И"
-			 //---поточный проверяимый выход ТУ не стоит в списке на выполнения
-			((s_TY_operation.f_TY)&&\
-			(ps_TY_user_config->s_TY_out_config[counter].mode_TY == DOUBLE_POSITION) && \
-			(counter!=num_out))||\
-			//---если в очереди на выполнение стоит команда,  "И"
-			//---"И" если тип поточного проверяимого выхода, PARALLEL_CHANNEL
-			//---"И" управляющий им выход ТУ не стоит в списке на выполнение
-			((s_TY_operation.f_TY)&&\
-			(ps_TY_user_config->s_TY_out_config[counter].mode_TY == PARALLEL_CHANNEL) && \
-			((num_out+s_address_oper_data.s_TY_address.set_state_TY)!=ps_TY_user_config->s_TY_out_config[counter].num_paralel)))
-		{
-			continue;
+		if(s_TY_operation.f_TY){ // если в очереди на выполнение стоить команда
+			if ( (counter==num_out)||\
+				//---если тип поточного проверяимого выхода, PARALLEL_CHANNEL
+				//---"И" управляющий им выход ТУ стоит в списке на выполнение
+				   (
+				      (ps_TY_user_config->s_TY_out_config[counter].mode_TY == PARALLEL_CHANNEL) && \
+				      ((num_out+s_address_oper_data.s_TY_address.set_state_TY)==ps_TY_user_config->s_TY_out_config[counter].num_paralel)
+				   )
+				)
+			{
+				s_ty_coil_check_grup.s_TY_is_check[s_ty_coil_check_grup.num_check_TY].num_check_TY=counter;
+				s_ty_coil_check_grup.s_TY_is_check[s_ty_coil_check_grup.num_check_TY].rez_check_TY=0;
+				s_ty_coil_check_grup.num_check_TY++;
+			}
+			else{
+				continue;
+			}
 		}
-		// во всех остальных случаях - поставить поточный выход ТУ в список на проверку
-		else
-		{
-			s_ty_coil_check_grup.s_TY_is_check[s_ty_coil_check_grup.num_check_TY].num_check_TY=counter;
-			s_ty_coil_check_grup.s_TY_is_check[s_ty_coil_check_grup.num_check_TY].rez_check_TY=0;
-			s_ty_coil_check_grup.num_check_TY++;
+		else{
+			if(
+			   (ps_TY_user_config->s_TY_out_config[counter].mode_TY == SINGLE_POSITION)&&\
+			   (s_oper_data_TY_present.set_state_TY[counter]==TY_ON)&&\
+			   (s_oper_data_TY_present.set_state_TY[counter]==s_oper_data_TY_present.set_state_TY[counter])
+			   )
+			{
+				s_ty_coil_check_grup.s_TY_is_check[s_ty_coil_check_grup.num_check_TY].num_check_TY=counter;
+				s_ty_coil_check_grup.s_TY_is_check[s_ty_coil_check_grup.num_check_TY].rez_check_TY=0;
+				s_ty_coil_check_grup.num_check_TY++;
+			}
 		}
 	}
+
 	// обнуляю флаг процеса выполнения проверки котушки
 	s_ty_coil_check_grup.f_check_end=RESET;
 	// запустить таймер управления проверкой
@@ -489,14 +501,14 @@ void processing_TY_signal_init_gpio(void) {
 	gpio_TY_init.GPIO_Pin = PIN_V_REL;
 	GPIO_Init(PORT_V_REL, &gpio_TY_init);
 	TY_CLEAR_OUT(PORT_V_REL, PIN_V_REL);
-/*
+
 	 // конфигурирую порт проверки наличия напряжения оперативного тока
 	 gpio_enable(PORT_V_INPUT);// включаю выбраный порт
-	 gpio_TY_init.GPIO_Mode=GPIO_Mode_IPU;
+	 gpio_TY_init.GPIO_Mode=GPIO_Mode_IN_FLOATING;
 	 gpio_TY_init.GPIO_Speed=GPIO_Speed_2MHz;
 	 gpio_TY_init.GPIO_Pin=PIN_V_INPUT;
 	 GPIO_Init(PORT_V_INPUT,&gpio_TY_init);
-*/
+
 
 	// конфигураци портов проверки состояния обмотки релле
 	// порты проверки состояния обмотки релле
@@ -514,7 +526,7 @@ void processing_TY_signal_init_gpio(void) {
 	for (k1 = 0; k1 < TOTAL_NUM_TY; k1++)
 	{
 		gpio_enable(s_rel_out[k1].port_operation); // включаю выбраный порт
-		gpio_TY_init.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+		gpio_TY_init.GPIO_Mode = GPIO_Mode_IPU;
 		gpio_TY_init.GPIO_Speed = GPIO_Speed_10MHz;
 		gpio_TY_init.GPIO_Pin = s_coil_check[k1].pin_operation;
 		GPIO_Init(s_coil_check[k1].port_operation, &gpio_TY_init);
@@ -543,7 +555,7 @@ void gpio_enable(GPIO_TypeDef *IN_GPIO){
 // - заполнение спика функций циклической проверки
 void processing_TY_signal_set_check_par(void) {
 	s_cycling_check.num_cycling_check = 0;
-    //заполнение спика функций проверок цепей устройства, которые нельзя использовать в режиме без проверок
+    //заполнение спика функций проверок цепей устройства, которые можно использовать в поточном режиме работы
 	if(s_ty_coil_check_grup.f_limit_check)//если выбран ограниченный режим проверок
 	{
 		a_check_fun_exception[0]=&processing_TY_signal_check_v;
@@ -559,11 +571,6 @@ void processing_TY_signal_set_check_par(void) {
 	// ПРОВЕРКА - проверка напряжения оперативного тока
 	s_cycling_check.pf_fun[s_cycling_check.num_cycling_check].pf_check = &processing_TY_signal_check_v;
 	s_cycling_check.pf_fun[s_cycling_check.num_cycling_check].maska_error = ERROR_V_INPUT;
-	s_cycling_check.num_cycling_check++;
-
-	// ПРОВЕРКА - проверка залипания контактов
-	s_cycling_check.pf_fun[s_cycling_check.num_cycling_check].pf_check =	&processing_TY_signal_check_rel_contact;
-	s_cycling_check.pf_fun[s_cycling_check.num_cycling_check].maska_error = ERROR_TY_REL_CONTACT;
 	s_cycling_check.num_cycling_check++;
 
 	// ПРОВЕРКА - проверка котушек релле
@@ -663,17 +670,30 @@ REZ_REQ_CHEACK_SLAVE processing_TY_check_force_single_coil_address_modbus(void* 
 	return ILLEGAL_DATA_ADRESS;
 }
 
+
 //---------------функция processing_TY_signal_operation---------------
 // функция processing_TY_signal_operation - ставит в очередь на выполнение команду ТУ
 u8 processing_TY_signal_operation(void* req, u8 num_peyload_data,u16 addres_data) {
 	S_ty_comand *ps_comand = req;
 	// ВСЕ ПРОВЕРКИ ВЫПОЛНЕНЫ КОГДА БЫЛА ПРИНЯТА КОМАНДА №5. !!!!
 	// ставим в очередь
-	s_TY_operation.num_TY = ps_comand->number - s_address_oper_data.s_TY_address.set_state_TY; // вычисляем порядочный номер выхода ТУ (0-(TOTAL_NUM_TY-1))
-	s_TY_operation.state_TY = ps_comand->state;
-	s_TY_operation.f_TY = REDY_COMAND;
+	xSemaphoreTake(SemaphoreHandle_read_ty_set, portMAX_DELAY); // беру мутекс, ожидать максимально допустимое время
+	s_TY_operation_modbus_set.num_TY = ps_comand->number - s_address_oper_data.s_TY_address.set_state_TY; // вычисляем порядочный номер выхода ТУ (0-(TOTAL_NUM_TY-1))
+	s_TY_operation_modbus_set.state_TY = ps_comand->state;
+	s_TY_operation_modbus_set.f_TY = REDY_COMAND;
+	xSemaphoreGive(SemaphoreHandle_read_ty_set); // отдаю мютекс
 	return (0);
 }
+
+//---------------функция processing_TY_signal_read_operatio---------------
+// функция processing_TY_signal_read_operatio -
+u8 processing_TY_signal_read_operatio(void) {
+	xSemaphoreTake(SemaphoreHandle_read_ty_set, portMAX_DELAY); // беру мутекс, ожидать максимально допустимое время
+	s_TY_operation=s_TY_operation_modbus_set; // отдаю мютекс
+	xSemaphoreGive(SemaphoreHandle_read_ty_set); // отдаю мютекс
+	return (0);
+}
+
 
 //---------------функция processing_TY_signal_clear---------------
 // функция processing_TY_signal_clear - очистить очередь на выполнение команду ТУ
@@ -681,7 +701,17 @@ void processing_TY_signal_clear(void) {
 	s_TY_operation.num_TY = 0;
 	s_TY_operation.state_TY = 0;
 	s_TY_operation.f_TY = 0;
+
+	xSemaphoreTake(SemaphoreHandle_read_ty_set, portMAX_DELAY); // беру мутекс, ожидать максимально допустимое время
+	s_TY_operation_modbus_set.num_TY = 0;
+	s_TY_operation_modbus_set.state_TY = 0;
+	s_TY_operation_modbus_set.f_TY = 0;
+	xSemaphoreGive(SemaphoreHandle_read_ty_set); // отдаю мютекс
 }
+
+
+
+
 
 //---------------функция processing_TY_signal_DP_TY---------------
 void processing_TY_signal_DP_TY(u8 num_ty, S_state_TY* p_status_TY) {
@@ -745,7 +775,7 @@ void processing_TY_signal_DP_TY(u8 num_ty, S_state_TY* p_status_TY) {
 		vTaskDelayUntil(&time_start,(portTickType)TIME_TOTAL_CHECK_V);
 	}
 
-	//--------- ВЫКЛЮЧАЮ НРУПОВОЭ РЕЛЛЕ ---------------
+	//--------- ВЫКЛЮЧАЮ ГРУПОВОЕ РЕЛЛЕ ---------------
 	TY_CLEAR_OUT(PORT_GRYP_REL, PIN_GRYP_REL);// отключить груповое релле
 	// выполнить проверку выключения групового релле
 	if (processing_TY_signal_chek_processing(&processing_TY_signal_check_gryp_rel_off, ERROR_GRYP_REL_OFF,p_status_TY, num_ty))
@@ -770,6 +800,10 @@ void processing_TY_signal_DP_TY(u8 num_ty, S_state_TY* p_status_TY) {
 		processing_TY_signal_disable_rellay(num_ty); // отключаю выходное релле ТУ и груповое релле
 		return;
 	}
+
+	// выполнить проверку котушек релле (результат не обрабатывается, так как запись в временный статус - регист происходит в самой функции проверки)
+
+	processing_TY_signal_chek_processing(&processing_TY_signal_check_coil, ERROR_TY_COIL,p_status_TY, num_ty);
 }
 
 //---------------функция processing_TY_signal_chek_processing---------------
@@ -1014,6 +1048,9 @@ u16 TY_calc_address_oper_reg(S_TY_address *ps_TY_address, u16 adres_start) {
 // не приведут к изменению состояния обмотки,  вызовут ответ об ошибке значения в поле данных запроса).
 void t_processing_TY(void *pvParameters) {
 	u8 k1;
+	// Создаю Семафор для доступу к структуре данных состояния ТУ,
+	SemaphoreHandle_read_ty_set=xSemaphoreCreateMutex();
+
 	TY_REZ_CHECK rez_chek_ty_modul;
 
 	// сохраняю конфигурационные данные в указателе на структуру конфигурации,
@@ -1026,45 +1063,48 @@ void t_processing_TY(void *pvParameters) {
 
 		vTaskDelete(NULL); // если проверка не пройдена - удалить задачу + аврийная сигнализация + ЗАПИСЬ В КАРТУ ПАМЯТИ !!!!
 	};
-
-	// продолжаю конфигурацию устройства
+	//продолжаю конфигурацию устройства
 	//конфигурирую програмный блок ТУ
 	processing_TY_signal_init();
 	while (1)
 	{
-		//status_TY=0;
-		//mem_map_processing_read_s_proces_object_modbus(&status_TY,1,s_address_oper_data.s_oper_data_TY.status_TY);
+		processing_TY_signal_read_operatio(); //обновляю данные в структура описания и выполнения команды ТУ
 		//стандартная циклическая проверка указаными функциями
 		for (k1 = 0; k1 < s_cycling_check.num_cycling_check; k1++) {
 			if(IS_FUN_EXCEPTION( s_cycling_check.pf_fun[k1].pf_check)){continue;}
 			rez_chek_ty_modul = s_cycling_check.pf_fun[k1].pf_check();
-			s_oper_data_TY_present.status_TY &=~(s_cycling_check.pf_fun[k1].maska_error); // обнуляю статус проверяимого параметра
+			if(s_cycling_check.pf_fun[k1].maska_error!=ERROR_TY_COIL)
+			{
+				s_oper_data_TY_present.status_TY &=~(s_cycling_check.pf_fun[k1].maska_error); // обнуляю статус проверяимого параметра
+			}
 			s_oper_data_TY_present.status_TY |= rez_chek_ty_modul; // устанавливаю статус результата проверки
 		}
 		// если была принята команда ТУ и статус регистр пустой (блок функционирует нормально)
-		if ((!(s_oper_data_TY_present.status_TY)) && (s_TY_operation.f_TY)) {
-			//if((s_TY_operation.f_TY)){ // ТОЛЬКО ДЛЯ ПРОВЕРКИ РАСКОМЕНТИРОВАТЬ ВЕРХНЮЮ СТРОКУ
-			// выставляю статус неопредиленного сотояния выхода ТУ, в промежутке времени между
-			// началом выполнения команды ТУ, и окончанием выполнения
-			s_oper_data_TY_present.set_state_TY[s_TY_operation.num_TY] =s_TY_operation.state_TY;
-			s_oper_data_TY_present.present_state_TY[s_TY_operation.num_TY] =TY_NOT_SET;
-			//s_oper_data_TY_present.operation_TY_statys[s_TY_operation.num_TY]=TY_NOT_DEF;
-			processing_TY_signal_update_TY_state(&s_oper_data_TY_present);
-			// выбираю тип ТУ из установок пользователя и выполняю переключения
-			switch (ps_TY_user_config->s_TY_out_config[s_TY_operation.num_TY].mode_TY)
+		if (s_TY_operation.f_TY) {
+			if (!s_oper_data_TY_present.status_TY)
 			{
-				case SINGLE_POSITION:processing_TY_signal_SP_TY(s_TY_operation.num_TY,&s_oper_data_TY_present);
-					break;
-				case DOUBLE_POSITION:processing_TY_signal_DP_TY(s_TY_operation.num_TY,&s_oper_data_TY_present);
-					break;
-				default:
-					break;
+				//if((s_TY_operation.f_TY)){ // ТОЛЬКО ДЛЯ ПРОВЕРКИ РАСКОМЕНТИРОВАТЬ ВЕРХНЮЮ СТРОКУ
+				// выставляю статус неопредиленного сотояния выхода ТУ, в промежутке времени между
+				// началом выполнения команды ТУ, и окончанием выполнения
+				s_oper_data_TY_present.set_state_TY[s_TY_operation.num_TY] =s_TY_operation.state_TY;
+				s_oper_data_TY_present.present_state_TY[s_TY_operation.num_TY] =TY_NOT_SET;
+				//s_oper_data_TY_present.operation_TY_statys[s_TY_operation.num_TY]=TY_NOT_DEF;
+				processing_TY_signal_update_TY_state(&s_oper_data_TY_present);
+				// выбираю тип ТУ из установок пользователя и выполняю переключения
+				switch (ps_TY_user_config->s_TY_out_config[s_TY_operation.num_TY].mode_TY)
+				{
+					case SINGLE_POSITION:processing_TY_signal_SP_TY(s_TY_operation.num_TY,&s_oper_data_TY_present);
+						break;
+					case DOUBLE_POSITION:processing_TY_signal_DP_TY(s_TY_operation.num_TY,&s_oper_data_TY_present);
+						break;
+					default:
+						break;
+				}
 			}
 			processing_TY_signal_clear();
 		}
 		// обновляю статус регистр модуля ТУ в карте памяти и флеш памяти
 		processing_TY_signal_update_TY_state(&s_oper_data_TY_present);
-
 	}
 }
 

@@ -25,8 +25,7 @@
 #include "processing_modbus.h"
 #include "processing_simple_gpio.h"
 #include "processing_reset_control.h"
-#include "processing_mesuremen.h"
-#include <mes_processing_sourse/processing_mesuremen_dma.h>
+
 
 // файл с хидерами процессов устройства
 #include "processing_includ.h"
@@ -125,7 +124,10 @@ int main(void)
 		// если в конфигурации поточный порт включен, выполн€ю настройку modbus
 		if(MODBUS_USART & (1<<k1)){
 
-			if(!(s_config_moduls.s_connectmodbus_global[count_modbus].state)){continue;}// если в конфигурации поточный порт выключен
+			if(!(s_config_moduls.s_connectmodbus_global[count_modbus].state)){// если в конфигурации поточный порт выключен
+				count_modbus++;
+				continue;
+			}
 
 			ConfigureUSART(&P_SHIFT(ps_connectmodbus_global,count_modbus)->s_port_config, present_usart[k1]); // настраиваю USART
 			// описываю параметры задачи

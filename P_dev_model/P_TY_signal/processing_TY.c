@@ -92,17 +92,14 @@ INIT_MBB_Rezult processing_TY_signal_analis_user_config(void) {
 	INIT_MBB_Rezult analis_user_config_check_paralel(u8 num_paralel_sourse,
 			u16 num_paralel_check, TY_MODE type) {
 		//существует ли выход паралельного канала согласно конфигурации
-		if ((ps_TY_user_config->s_TY_out_config[num_paralel_check].num_paralel
-				< s_address_oper_data.s_TY_address.set_state_TY)
-				|| (ps_TY_user_config->s_TY_out_config[num_paralel_check].num_paralel
-						>= (s_address_oper_data.s_TY_address.set_state_TY
-								+ TOTAL_NUM_TY))) // номер должен быть менше TOTAL_NUM_TY
+		if ((ps_TY_user_config->s_TY_out_config[num_paralel_check].num_paralel < s_address_oper_data.s_TY_address.set_state_TY)||
+				(ps_TY_user_config->s_TY_out_config[num_paralel_check].num_paralel >=
+				(s_address_oper_data.s_TY_address.set_state_TY + TOTAL_NUM_TY))) // номер должен быть менше TOTAL_NUM_TY
 		{
 			return MBB_INIT_ERROR;
 		};
 		// проверка типа паралельного выхода
-		if (ps_TY_user_config->s_TY_out_config[num_paralel_check].mode_TY
-				!= type) // тип должен быть PARALLEL_CHANNEL
+		if (ps_TY_user_config->s_TY_out_config[num_paralel_check].mode_TY!= type) // тип должен быть PARALLEL_CHANNEL
 		{
 			return MBB_INIT_ERROR;
 		};
@@ -227,10 +224,12 @@ void processing_TY_signal_init_state(void) {
 	// если статус не был установлен (модуль ТУ функционировал) анализирую
 	// - если выход ТУ типа SINGLE_POSITION - нужно установить то значения ТУ, которое было до перезагрузки, и выставить аналогичные статтусы
 	// - если выход ТУ типа DOUBLE_POSITION - значения состояния не определино (не анализирую)
-	for (count_ty_out = 0; count_ty_out < TOTAL_NUM_TY; count_ty_out++) { //
-		if (ps_TY_user_config->s_TY_out_config[count_ty_out].mode_TY
-				== SINGLE_POSITION) { // если выход ТУ типа SINGLE_POSITION
-			if (s_state_TY.operation_TY_statys[count_ty_out] != REZ_CHECK_OK) {
+	for (count_ty_out = 0; count_ty_out < TOTAL_NUM_TY; count_ty_out++)
+	{ //
+		if (ps_TY_user_config->s_TY_out_config[count_ty_out].mode_TY== SINGLE_POSITION)
+		{ // если выход ТУ типа SINGLE_POSITION
+			if (s_state_TY.operation_TY_statys[count_ty_out] != REZ_CHECK_OK)
+			{
 				continue;
 			}; // если перед перезагрузкой последняя операция ТУ
 			// была выпонена с исключением - не анализировать состояние
@@ -645,7 +644,8 @@ REZ_REQ_CHEACK_SLAVE processing_TY_signal_modbus_check(void* req) {
 		return ILLEGAL_DATA_VALUE;
 	}
 	// Порядочныйномер ТУ
-	number_out_TY = ps_comand->number- s_address_oper_data.s_TY_address.set_state_TY;
+	number_out_TY = ps_comand->number
+			- s_address_oper_data.s_TY_address.set_state_TY;
 	//проверка выхода ТУ согласно конфигурации
 	if ((ps_TY_user_config->s_TY_out_config[number_out_TY].mode_TY == NO_OUT)
 			|| (ps_TY_user_config->s_TY_out_config[number_out_TY].mode_TY== PARALLEL_CHANNEL))
@@ -680,8 +680,7 @@ REZ_REQ_CHEACK_SLAVE processing_TY_signal_modbus_check(void* req) {
 // выходные аргументы:
 // REQ_SLAVE_OK - проверкаа выполнена успешно
 // ILLEGAL_DATA_ADRESS - недопустимый адрес
-REZ_REQ_CHEACK_SLAVE processing_TY_check_is_coil_status_address_modbus(
-		void* p_check_address) {
+REZ_REQ_CHEACK_SLAVE processing_TY_check_is_coil_status_address_modbus(void* p_check_address) {
 	u16 address = *(u16*) p_check_address;
 	u16 num_reg = *(u16*) ((u16*) p_check_address + 1);
 	// адрес принадлежит области регистров ТY
@@ -905,8 +904,8 @@ void processing_TY_signal_SP_TY(u8 num_ty, S_state_TY* status_TY) {
 // функция processing_TY_signal_check_V - выполняет проверку наличия оперативного тока в линии
 TY_REZ_CHECK processing_TY_signal_check_v(void) {
 	u8 state = 0;
-	TY_SET_OUT(PORT_V_REL, PIN_V_REL);
 	// подключаю измерительную цепь
+	TY_SET_OUT(PORT_V_REL, PIN_V_REL);
 	vTaskDelay(2); // переходной процес подключения
     state = processing_TY_signal_read_v_input(); // считваю состояние напряжение опер тока
 	TY_CLEAR_OUT(PORT_V_REL, PIN_V_REL);
@@ -1074,6 +1073,7 @@ void t_processing_TY(void *pvParameters) {
 
 		vTaskDelete(NULL); // если проверка не пройдена - удалить задачу + аврийная сигнализация + ЗАПИСЬ В КАРТУ ПАМЯТИ !!!!
 	};
+
 	// продолжаю конфигурацию устройства
 	//конфигурирую програмный блок ТУ
 	processing_TY_signal_init();

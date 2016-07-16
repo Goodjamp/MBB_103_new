@@ -40,10 +40,10 @@ void default_config_table(S_global_config *ps_mem_data_set) {
 	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[0].s_port_config.parity = 0;
 	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[0].s_port_config.amountbyte = 8;
 	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[0].s_port_config.controlpotok=0;
-	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[0].type = PROTOCOL_MODBUS_SLAVE; // master
-	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[0].waitresp = 200;
-	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[0].number_of_pribor = 2;
-	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[0].number_no_answer = 200;
+	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[0].type = PROTOCOL_MODBUS_MASTER; // master
+	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[0].waitresp = 20;
+	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[0].number_of_pribor = 1;
+	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[0].number_no_answer = 10;
 	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[0].adress_kp = 1;
 
 
@@ -66,7 +66,7 @@ void default_config_table(S_global_config *ps_mem_data_set) {
 	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[2].s_port_config.parity = 0;
 	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[2].s_port_config.amountbyte = 8;
 	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[2].s_port_config.controlpotok=0;
-	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[2].type = PROTOCOL_MODBUS_MASTER; // master
+	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[2].type = PROTOCOL_MODBUS_SLAVE; // master
 	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[2].waitresp = 200;
 	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[2].number_of_pribor = 2;
 	ps_mem_data_set->s_config_moduls.s_connectmodbus_global[2].number_no_answer = 20;
@@ -110,24 +110,24 @@ void default_config_table(S_global_config *ps_mem_data_set) {
 */
 
 	ps_mem_data_set->s_config_moduls.s_TY_user_config.state=ENABLE;
-	ps_mem_data_set->s_config_moduls.s_TY_user_config.puls_with=4000;
+	ps_mem_data_set->s_config_moduls.s_TY_user_config.puls_with=1000;
 	ps_mem_data_set->s_config_moduls.s_TY_user_config.f_use_V_check=1;
-	//рс ╧1 518
+	//рс ╧1 519
 	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[0].mode_TY=2;
 	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[0].f_paralel_out=0;
 	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[0].num_paralel=0;
-	//рс ╧2 519
+	//рс ╧2 520
 	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[1].mode_TY=2;
-	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[1].f_paralel_out=1;
-	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[1].num_paralel=522;
-	//рс ╧3 520
-	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[2].mode_TY=1;
+	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[1].f_paralel_out=0;
+	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[1].num_paralel=0;
+	//рс ╧3 521
+	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[2].mode_TY=2;
 	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[2].f_paralel_out=0;
 	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[2].num_paralel=0;
-	//рс ╧4 521
-	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[3].mode_TY=3;
-	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[3].f_paralel_out=1;
-	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[3].num_paralel=520;
+	//рс ╧4 522
+	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[3].mode_TY=2;
+	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[3].f_paralel_out=0;
+	ps_mem_data_set->s_config_moduls.s_TY_user_config.s_TY_out_config[3].num_paralel=0;
 
 	//-------------------------------------------------------------------------------
 	// ----------------МЮЯРПНИЙХ перпъмякъжхх----------------------------------------
