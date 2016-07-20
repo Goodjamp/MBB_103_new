@@ -1,5 +1,5 @@
 #include "dma_m2m.h"
-static S_dma_m2m dma_m2m_status={0,0,0,0,0};
+static S_dma_m2m dma_m2m_status={0};
 static  DMA_Channel_TypeDef *volatile sel_dma_m2m;
 
 // --------------processing_mes_adc_config_dma_m2m--------------------------

@@ -38,11 +38,7 @@
 
 
 typedef struct{
-	u8 f_transmit_status:4;
-	u8 f_reserved_1:1;
-	u8 f_reserved_2:1;
-	u8 f_reserved_3:1;
-	u8 f_reserved_4:1;
+	u8 f_transmit_status;
 }S_dma_m2m;
 
 typedef enum{

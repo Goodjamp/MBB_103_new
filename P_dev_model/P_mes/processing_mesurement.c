@@ -10,6 +10,7 @@
 #include "stm32f10x_gpio.h"
 #include "stm32f10x_rcc.h"
 #include "math.h"
+#include "string.h"
 
 // Проверяем допустимые настройки соотношения частоты АЦП и размера буффера АЦП
 #if (BPF_F/ADC_BUFFER_SIZE_HALF)*ADC_BUFFER_SIZE_HALF!=BPF_F
@@ -155,16 +156,17 @@ void processing_mesurement_task(){
 	if(s_buff_adc.f_mes_complete){   //
 
 		GPIO_SetBits(GPIOB,GPIO_Pin_9);
-		vTaskSuspendAll();
+		//vTaskSuspendAll();
 
 		s_buff_adc.f_mes_complete=0;
 		//copy temp data ОТКУДА - КУДА
-		memcopy_dma(DMA_TX_2BYTE,ADC_BUFFER_SIZE_HALF,s_buff_adc.p_valid_buf,&buff_to_filtring[BPF_Q-1]);
-		while(
-				dma_m2m_get_statys()
-				){
+
+/*		memcopy_dma(DMA_TX_2BYTE,ADC_BUFFER_SIZE_HALF,s_buff_adc.p_valid_buf,&buff_to_filtring[BPF_Q-1]);
+		while(dma_m2m_get_statys())
+		{
 			qw++;
-		}// wait complete copy
+		}// wait complete copy*/
+		memcpy(&buff_to_filtring[BPF_Q-1],s_buff_adc.p_valid_buf,ADC_BUFFER_SIZE_HALF*DMA_TX_2BYTE);
 		// Выполняю фильтрацию
 		fun_proces_filterin_integer(&buff_to_filtring[0],
 				                     SIZE_BUFF_TO_FILTRING,
@@ -173,20 +175,23 @@ void processing_mesurement_task(){
 				                     BPF_Q,
 				                     &s_coef_filter);
 		// копирую результаты АЦП размером (порядок_фильтра - 1) из конца буффера в начало
-		memcopy_dma(DMA_TX_2BYTE,
+				memcopy_dma(DMA_TX_2BYTE,
 				(BPF_Q-1),
 				&buff_to_filtring[SIZE_BUFF_TO_FILTRING-(BPF_Q-1)],
 				&buff_to_filtring[0]);
+		memcpy(&buff_to_filtring[0],&buff_to_filtring[SIZE_BUFF_TO_FILTRING-(BPF_Q-1)],(BPF_Q-1)*DMA_TX_2BYTE);
 		// первую последовательность нужно пропустить, потому что буффер данных к фильтрации в начале работы НЕ заполнен
 		if(f_begin_mesurement){
 			f_begin_mesurement=0;
+			//xTaskResumeAll();
 			return;
 		}
+
 		// выполнить обработку результатов измерений, расчитать ток и частоту
 		processing_mesurement_calc();
-
+		//xTaskResumeAll();
 		GPIO_ResetBits(GPIOB,GPIO_Pin_9);
-		xTaskResumeAll();
+
 
 	}
 

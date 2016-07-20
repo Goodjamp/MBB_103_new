@@ -49,7 +49,7 @@
 #define LD_CLEAR   GPIO_ResetBits(LD_PORT,LD_PIN);
 
 // Период обновления значений ТС, мc
-#define PERIOD_GET_TC   1
+#define PERIOD_GET_TC   2
 
 // Квант счета таймера, в отсчетах
 #define TIM_PRESCALER   1000

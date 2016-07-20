@@ -162,7 +162,7 @@ int main(void)
 #error  Inavalide task DEV_1 priopity (Ger)
 #endif
 	if(s_config_moduls.USER_CONFIG_FIELD(s,DEV_1).state){// если в конфигурации поточный модуль выключен
-		//xTaskCreate(  TASK_PROCESSING(DEV_1), ( signed char * ) TASK_IDENT(DEV_1), 100,(void *)&s_config_moduls.USER_CONFIG_FIELD(s,DEV_1), TASK_PRIORITY(DEV_1), NULL );
+		xTaskCreate(  TASK_PROCESSING(DEV_1), ( signed char * ) TASK_IDENT(DEV_1), 100,(void *)&s_config_moduls.USER_CONFIG_FIELD(s,DEV_1), TASK_PRIORITY(DEV_1), NULL );
 	}
 #endif
 
@@ -171,7 +171,7 @@ int main(void)
 #error  Inavalide task DEV_1 priopity (Ger)
 #endif
 	if(s_config_moduls.USER_CONFIG_FIELD(s,DEV_2).state){// если в конфигурации поточный модуль выключен
-		//xTaskCreate(  TASK_PROCESSING(DEV_2), ( signed char * ) TASK_IDENT(DEV_2), 100,(void *)&s_config_moduls.USER_CONFIG_FIELD(s,DEV_2), TASK_PRIORITY(DEV_2), NULL );
+		xTaskCreate(  TASK_PROCESSING(DEV_2), ( signed char * ) TASK_IDENT(DEV_2), 100,(void *)&s_config_moduls.USER_CONFIG_FIELD(s,DEV_2), TASK_PRIORITY(DEV_2), NULL );
 	}
 #endif
 
@@ -180,7 +180,7 @@ int main(void)
 #error  Inavalide task DEV_1 priopity (Ger)
 #endif
 	if(s_config_moduls.USER_CONFIG_FIELD(s,DEV_3).state){// если в конфигурации поточный модуль выключен
-		//xTaskCreate(  TASK_PROCESSING(DEV_3), ( signed char * ) TASK_IDENT(DEV_3), 100,(void *)&s_config_moduls.USER_CONFIG_FIELD(s,DEV_3), TASK_PRIORITY(DEV_3), NULL );
+		xTaskCreate(  TASK_PROCESSING(DEV_3), ( signed char * ) TASK_IDENT(DEV_3), 100,(void *)&s_config_moduls.USER_CONFIG_FIELD(s,DEV_3), TASK_PRIORITY(DEV_3), NULL );
 	}
 #endif
 
