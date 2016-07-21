@@ -11,6 +11,7 @@
 #include "stm32f10x_rcc.h"
 #include "math.h"
 #include "string.h"
+#include "semphr.h"
 
 // Проверяем допустимые настройки соотношения частоты АЦП и размера буффера АЦП
 #if (BPF_F/ADC_BUFFER_SIZE_HALF)*ADC_BUFFER_SIZE_HALF!=BPF_F
@@ -23,6 +24,9 @@ u16 buff_adc[ADC_BUFFER_SIZE_FULL]={[0 ... (ADC_BUFFER_SIZE_FULL-1)]=0}; // буфф
 u16 buff_to_filtring[SIZE_BUFF_TO_FILTRING]={[0 ... (SIZE_BUFF_TO_FILTRING-1)]=0}; // буффер данных к фильтрации
 s32 buff_rez_filtring[ADC_BUFFER_SIZE_HALF*2]={[0 ... (ADC_BUFFER_SIZE_HALF*2-1)] = 0};// буффер результатов фильтрации действительная и мнимая части перемежаются
 S_buff_rez s_buff_rez;      // буффер результатов измерений
+static xSemaphoreHandle SemphrADCBuffFull;
+//u8 filtring_fun[0x175];
+//p_fun_proces_filterin_integer ram_filtring=(p_fun_proces_filterin_integer)&filtring_fun[1];
 
 
 //структура параметров фильтра
@@ -153,7 +157,7 @@ void processing_mesurement_task(){
 	u8 qw=1;
 	volatile static uint8_t f_begin_mesurement=1;
 	//new rezult redy
-	if(s_buff_adc.f_mes_complete){   //
+	//if(s_buff_adc.f_mes_complete){   //
 
 		GPIO_SetBits(GPIOB,GPIO_Pin_9);
 		//vTaskSuspendAll();
@@ -161,24 +165,26 @@ void processing_mesurement_task(){
 		s_buff_adc.f_mes_complete=0;
 		//copy temp data ОТКУДА - КУДА
 
-/*		memcopy_dma(DMA_TX_2BYTE,ADC_BUFFER_SIZE_HALF,s_buff_adc.p_valid_buf,&buff_to_filtring[BPF_Q-1]);
+	/*	memcopy_dma(DMA_TX_2BYTE,ADC_BUFFER_SIZE_HALF,s_buff_adc.p_valid_buf,&buff_to_filtring[BPF_Q-1]);
 		while(dma_m2m_get_statys())
 		{
 			qw++;
 		}// wait complete copy*/
 		memcpy(&buff_to_filtring[BPF_Q-1],s_buff_adc.p_valid_buf,ADC_BUFFER_SIZE_HALF*DMA_TX_2BYTE);
 		// Выполняю фильтрацию
+
 		fun_proces_filterin_integer(&buff_to_filtring[0],
 				                     SIZE_BUFF_TO_FILTRING,
 				                     DEC_STEP,
 				                     &buff_rez_filtring[0],
 				                     BPF_Q,
 				                     &s_coef_filter);
+
 		// копирую результаты АЦП размером (порядок_фильтра - 1) из конца буффера в начало
-				memcopy_dma(DMA_TX_2BYTE,
+		/*		memcopy_dma(DMA_TX_2BYTE,
 				(BPF_Q-1),
 				&buff_to_filtring[SIZE_BUFF_TO_FILTRING-(BPF_Q-1)],
-				&buff_to_filtring[0]);
+				&buff_to_filtring[0]);*/
 		memcpy(&buff_to_filtring[0],&buff_to_filtring[SIZE_BUFF_TO_FILTRING-(BPF_Q-1)],(BPF_Q-1)*DMA_TX_2BYTE);
 		// первую последовательность нужно пропустить, потому что буффер данных к фильтрации в начале работы НЕ заполнен
 		if(f_begin_mesurement){
@@ -193,9 +199,10 @@ void processing_mesurement_task(){
 		GPIO_ResetBits(GPIOB,GPIO_Pin_9);
 
 
-	}
+	//}
 
 }
+
 
 u16 mesurement_calc_address_oper_reg(S_mesurement_address *ps_mesurement_address, u16 adres_start){
 	ps_mesurement_address->status_mesurement=adres_start;
@@ -204,6 +211,11 @@ u16 mesurement_calc_address_oper_reg(S_mesurement_address *ps_mesurement_address
 	return (ps_mesurement_address->rez_norm+NUM_REG_REZ_NORM);
 }
 
+
+void processing_mes_adc_buff_full_callback(void){
+	portBASE_TYPE priority;
+	xSemaphoreGiveFromISR(SemphrADCBuffFull,&priority);
+}
 
 void t_processing_mesurement(void *pvParameters){
 
@@ -215,11 +227,20 @@ void t_processing_mesurement(void *pvParameters){
 	GPIO_Init(GPIOB,&gpio_service);
 	GPIO_ResetBits(GPIOB,GPIO_Pin_9);
 
+	//memcpy((u8*)ram_filtring,(u8*)fun_proces_filterin_integer,0x170 );
+	//filtring_fun[0]=0x2d;
+	// Семафор для разблокировки задачи обработки результатов АЦП по факту
+    // заполнения буффера АЦП
+	 vSemaphoreCreateBinary(SemphrADCBuffFull);
+	 processing_mes_adc_set_dma_callback(&processing_mes_adc_buff_full_callback);
 	//конфигурация АЦП+ДМА, ДМА(М2М), ЦОС(коєффициенты фильтра)
 	processing_mesurement_global_config();
 
+
 	while(1)
     {
+		// жду пока заполниться буффер АЦП
+		xSemaphoreTake(SemphrADCBuffFull,portMAX_DELAY);
 		//GPIO_SetBits(GPIOB,GPIO_Pin_9);
     	processing_mesurement_task();
     	//GPIO_ResetBits(GPIOB,GPIO_Pin_9);

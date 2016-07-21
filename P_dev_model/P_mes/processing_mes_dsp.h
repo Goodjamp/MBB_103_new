@@ -38,6 +38,8 @@ typedef union{
 	s32   s32_array[Q_MAX];
 }float_s32;
 
+
+
 // целочисленные, или с плавающей точкой 4-х байтные коэфициэнты фильтра
 typedef struct{
 	float_s32 re_koef_filtr; // действительные коэфициенты фильтра
@@ -58,6 +60,9 @@ typedef struct{
 	u16 DF_filt;  // ширина фильтра
 	float F_adc;  // Частота дискретизации
 } S_par_filters;
+
+// указатель на функцию фильтрации
+typedef u8 (*p_fun_proces_filterin_integer)(u16*, u16 , u8 ,s32*,u16 , S_coef_filter_integer*);
 
 
 // Прототипы функций

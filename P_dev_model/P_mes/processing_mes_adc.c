@@ -8,6 +8,7 @@
 
 #include "processing_mes_adc.h"
 S_Buffer_result *p_buffer_result;
+static volatile S_processing_mes_adc_dma_callback s_processing_mes_adc_dma_callback={.fun_is_set=0};
 
 
 PROCESSING_MES_ADC_STATUS processing_mes_adc_config(S_ADC_init const* const ps_adc_init, S_Buffer_result *pconstps_buffer_result ){
@@ -140,11 +141,18 @@ PROCESSING_MES_ADC_STATUS processing_mes_adc_config_dma_adc(S_Buffer_result cons
 	//Config interupt:
 	DMA_ITConfig(ADC_DMA_CHANNEL,DMA_IT_TC,ENABLE);  // transmit complete
  	DMA_ITConfig(ADC_DMA_CHANNEL,DMA_IT_HT,ENABLE);  // half transmit complete
+	NVIC_SetPriority(DMA1_Channel1_IRQn,13);
  	NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 	// Enable DMA
 	DMA_Cmd(ADC_DMA_CHANNEL,ENABLE);
 
 	return ADC_OK;
+}
+
+
+void processing_mes_adc_set_dma_callback(adc_dma_callback callback_fun){
+	s_processing_mes_adc_dma_callback.callbac_fun=callback_fun;
+	s_processing_mes_adc_dma_callback.fun_is_set=1;
 }
 
 //----------interrupt DMA1_Channel1_IRQHandler-------------
@@ -160,6 +168,9 @@ void DMA1_Channel1_IRQHandler(void){
 	// Global clear interupt flag
 	DMA_ClearITPendingBit(DMA1_IT_GL1);
 	// start transmit last ADC data to filtration buffer
+	if(s_processing_mes_adc_dma_callback.fun_is_set){
+		s_processing_mes_adc_dma_callback.callbac_fun();
+	}
 }
 
 

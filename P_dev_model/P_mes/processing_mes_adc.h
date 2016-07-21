@@ -19,6 +19,14 @@
 
 #define ADC_DMA_CHANNEL     DMA1_Channel1
 
+//
+typedef void (*adc_dma_callback)(void);
+
+typedef struct{
+	adc_dma_callback callbac_fun;
+	u8               fun_is_set;
+}S_processing_mes_adc_dma_callback;
+
 typedef struct{
 	u32 T_adc;           //Period ADC conversion, us
 	ADC_TypeDef *ADC;
@@ -45,6 +53,7 @@ PROCESSING_MES_ADC_STATUS processing_mes_adc_config(S_ADC_init const* const ps_a
 PROCESSING_MES_ADC_STATUS processing_mes_adc_config_adc(S_ADC_init const* const ps_adc_init);
 PROCESSING_MES_ADC_STATUS processing_mes_adc_config_tim(S_ADC_init const* const ps_adc_init);
 PROCESSING_MES_ADC_STATUS processing_mes_adc_config_dma_adc(S_Buffer_result const* const ps_buffer_result);
+void processing_mes_adc_set_dma_callback(adc_dma_callback callback_fun);
 
 
 

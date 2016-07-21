@@ -20,7 +20,7 @@
 #define DEV_1_T_PRIORITY  2
 #define DEV_2_T_PRIORITY  1
 #define DEV_3_T_PRIORITY  1
-#define DEV_4_T_PRIORITY  1
+#define DEV_4_T_PRIORITY  3
 #define DEV_5_T_PRIORITY  1
 #define DEV_6_T_PRIORITY  1
 #define DEV_7_T_PRIORITY  1
