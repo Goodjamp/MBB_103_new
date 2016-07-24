@@ -37,9 +37,6 @@
 
 
 
-typedef struct{
-	u8 f_transmit_status;
-}S_dma_m2m;
 
 typedef enum{
 	DMA_TX_1BYTE=0,
@@ -53,6 +50,11 @@ typedef enum{
 	DMA_M2M_BUSY=1,
 	DMA_M2M_BAD_CHANNEL=2
 }DMA_M2M_STATYS;
+
+typedef struct{
+	volatile u8 f_transmit_status;
+}S_dma_m2m;
+
 
 DMA_M2M_STATYS dma_m2m_init(DMA_Channel_TypeDef *dma_ch);
 void DMA1_Channel2_IRQHandler(void);

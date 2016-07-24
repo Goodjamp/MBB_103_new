@@ -56,7 +56,7 @@ INIT_MBB_Rezult processing_mem_map_fill_S_route_table(u8 *p_read_rout_table) {
 //                         - адрес последнего регистра устройства
 u16 routing_data_calc_address_oper_reg(S_routing_data_address *ps_routing_data_address, u16 adres_start){
 	ps_routing_data_address->status_routing_data=adres_start;
-	return adres_start;
+	return (adres_start+SIZE_SYAYUS_REG_OPER_ROUTING);
 };
 
 

@@ -189,7 +189,7 @@ int main(void)
 #error  Inavalide task DEV_1 priopity (Ger)
 #endif
 	if(s_config_moduls.USER_CONFIG_FIELD(s,DEV_4).state){// если в конфигурации поточный модуль выключен
-		xTaskCreate(  TASK_PROCESSING(DEV_4), ( signed char * ) TASK_IDENT(DEV_4), 400,(void *)&s_config_moduls.USER_CONFIG_FIELD(s,DEV_4), TASK_PRIORITY(DEV_4), NULL );
+		xTaskCreate(  TASK_PROCESSING(DEV_4), ( signed char * ) TASK_IDENT(DEV_4), 500,(void *)&s_config_moduls.USER_CONFIG_FIELD(s,DEV_4), TASK_PRIORITY(DEV_4), NULL );
 	}
 #endif
 
@@ -298,6 +298,8 @@ int main(void)
 // задача управления процесом програмной презагрузки и световой индикации режима работы
 	xTaskCreate(  t_processing_reset_control, ( signed char * ) "WatcDogTask", 70,	NULL, 4, NULL );
 
+	u16 mem_size;
+	mem_size=xPortGetFreeHeapSize();
 	//--------------НУ ..... ЗАПУСКАЮ ПЛАНИРОВЩИК-------------И ПОЛЕТЕЛИ!!!!!!!!!!-----------------------------
 	vTaskStartScheduler();
 

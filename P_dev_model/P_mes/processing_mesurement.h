@@ -51,10 +51,23 @@ typedef struct{
 	double_t rez_mes;
 }S_buff_rez;
 
-void check_filter(void);
+typedef struct{
+	S_ADC_init s_adc;
+	S_Buffer_result s_buff_adc;
+	u16 buff_adc[ADC_BUFFER_SIZE_FULL];//={[0 ... (ADC_BUFFER_SIZE_FULL-1)]=0}; // буффер результатов АЦП
+	u16 buff_to_filtring[SIZE_BUFF_TO_FILTRING];//={[0 ... (SIZE_BUFF_TO_FILTRING-1)]=0}; // буффер данных к фильтрации
+	s32 buff_rez_filtring[ADC_BUFFER_SIZE_HALF*2];//={[0 ... (ADC_BUFFER_SIZE_HALF*2-1)] = 0};// буффер результатов фильтрации действительная и мнимая части перемежаются
+	S_buff_rez s_buff_rez;      // буффер результатов измерений
+	//структура параметров фильтра
+	S_par_filters filter_par;
+	S_coef_filter_integer s_coef_filter;
+}S_globall_buff;
+
+
+void check_filter(S_globall_buff * ps_globall_buff);
 void data_operation_sin(u16 *pa_sin, u16 length, float f1, float Am, float fi,float Fadc);
-void processing_mesurement_global_config(void);
-void processing_mesurement_calc(void);
-void processing_mesurement_task(void);
+void processing_mesurement_global_config(S_globall_buff * ps_globall_buff );
+void processing_mesurement_calc(S_globall_buff * ps_globall_buff);
+void processing_mesurement_task(S_globall_buff * ps_globall_buff);
 
 #endif

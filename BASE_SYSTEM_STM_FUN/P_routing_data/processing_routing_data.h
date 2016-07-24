@@ -17,6 +17,7 @@
 #include "processing_reset_control.h"
 #include "processing_routing_data_extern.h"
 
+#define SIZE_SYAYUS_REG_OPER_ROUTING 1
 
 typedef enum{
 	CONFIG_OK=0,

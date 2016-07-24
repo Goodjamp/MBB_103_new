@@ -1,6 +1,8 @@
 #include "dma_m2m.h"
-static S_dma_m2m dma_m2m_status={0};
+#include "stm32f10x_gpio.h"
+ S_dma_m2m dma_m2m_status={0};
 static  DMA_Channel_TypeDef *volatile sel_dma_m2m;
+static volatile u8 status=0;
 
 // --------------processing_mes_adc_config_dma_m2m--------------------------
 DMA_M2M_STATYS dma_m2m_init(DMA_Channel_TypeDef *dma_ch){
@@ -38,16 +40,27 @@ void DMA1_Channel2_IRQHandler(void){
 	DMA_ClearITPendingBit(DMA1_IT_GL2);
 	DMA_Cmd(sel_dma_m2m,DISABLE);
 	dma_m2m_status.f_transmit_status=DMA_M2M_OK;
+	status=0;
+	GPIO_ResetBits(GPIOB,GPIO_Pin_9);
 }
 
 
 DMA_M2M_STATYS dma_m2m_get_statys(void){
-	return dma_m2m_status.f_transmit_status;
+	//NVIC_DisableIRQ(DMA_M2M_IRQ);
+	__disable_irq();
+	DMA_M2M_STATYS temp_dma_statys=dma_m2m_status.f_transmit_status;
+	//NVIC_EnableIRQ(DMA_M2M_IRQ);
+	__enable_irq();
+
+	return temp_dma_statys;
 }
 
 //
 
 DMA_M2M_STATYS memcopy_dma(DMA_M2M_TX_SIZE size_var,u16 size_data,void *pdsrc, void *pdst){
+
+	GPIO_SetBits(GPIOB,GPIO_Pin_9);
+
 	if(dma_m2m_status.f_transmit_status){return DMA_M2M_BUSY;}
 
 	DMA1_Channel2->CNDTR=size_data;
@@ -67,5 +80,7 @@ DMA_M2M_STATYS memcopy_dma(DMA_M2M_TX_SIZE size_var,u16 size_data,void *pdsrc, v
 	DMA_Cmd(sel_dma_m2m,ENABLE);
 	// set busy flag
 	dma_m2m_status.f_transmit_status=DMA_M2M_BUSY;
- 	return DMA_M2M_OK;
+	status=1;
+ 	while(status){}
+	return DMA_M2M_OK;
 }

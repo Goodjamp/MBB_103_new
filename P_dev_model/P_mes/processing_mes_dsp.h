@@ -11,7 +11,7 @@
 #include "stm32f10x.h"
 #include "math.h"
 //#include "arm_math.h"
-#include "processing_mesurement.h"
+//#include "processing_mesurement.h"
 
 
 //ошибки фильтрации
