@@ -17,8 +17,6 @@
 
 // Количекство статус-регистров процнсса messurement
 #define NUM_REG_STATUS_MES      1
-// к-во регистров для результата типа FLOAT
-#define NUM_REG_REZ_FLOAT       sizeof(float)/sizeof(S_proces_object_modbus)
 // к-во регистров для нормированного результата измерения
 #define NUM_REG_REZ_NORM       sizeof(u16)/sizeof(S_proces_object_modbus)
 
@@ -28,8 +26,8 @@
 //-----------------------------Адреса оперативных регистров процесса ТС---------------------------------------------------------------
 typedef struct{
 	u16  status_mesurement; // статус регистры mesurement
-	u16  rez_mrez_float;    // адрес в памяти МК регистров результата измерения типа  FLOAT
-	u16  rez_norm;          // адрес в памяти МК регистров НОРМИРОВАННОГО результата измерения
+	u16  rez_mes_current;    // адрес в памяти МК регистров результата измерения тока
+	u16  rez_mes_frequency;  // адрес в памяти МК регистров результата измерения частоты
 } S_mesurement_address;
 //--------------------------------------------------------------------------------------------------------------------------------------
 
@@ -37,8 +35,8 @@ typedef struct{
 //----------------------------- Оперативные регистры процесса ТС------------------------------------------------------------------------
 typedef struct{
 	S_proces_object_modbus  status_mesurement; // статус регистры mesurement
-	S_proces_object_modbus  rez_float[NUM_REG_REZ_FLOAT];  // результат измерений типа FLOAT
-	S_proces_object_modbus  rez_norm[NUM_REG_REZ_NORM];   //  нормализированный результат измерений (x100)
+	S_proces_object_modbus  rez_mes_current[NUM_REG_REZ_NORM];  // результат измерений тока
+	S_proces_object_modbus  rez_mes_frequency[NUM_REG_REZ_NORM]; // результат измерений частоты х1000
 } S_mesurement_oper_data;
 //--------------------------------------------------------------------------------------------------------------------------------------
 

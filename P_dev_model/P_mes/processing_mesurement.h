@@ -22,6 +22,10 @@
 #define ADC_BUFFER_SIZE_FULL  40
 //К-во результатов половиного прерывания
 #define ADC_BUFFER_SIZE_HALF  20
+//Размер буффера результатов измерений (окна измерений) в к-ве ADC_BUFFER_SIZE_HALF
+// тоесть результаты усредняются в окне, которое равно (отсчетов) REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF
+//                                                     (время)    REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF/BPF_F
+#define REZ_BUFF_SIZE 10
 
 //---------------ПАРАМЕТРЫ ФИЛЬТРА--------------------
 //Центральная частота фильтра
@@ -43,10 +47,9 @@
 // разряджность измерерний - 12 бит
 #define BIT_REF       4095
 
-
 typedef struct{
 	S_fifo_steak steck_rez;
-	double_t buff_summ[BPF_F/ADC_BUFFER_SIZE_HALF];
+	double_t buff_summ[REZ_BUFF_SIZE];
 	double_t temp_sum;
 	double_t rez_mes;
 }S_buff_rez;
@@ -57,7 +60,8 @@ typedef struct{
 	u16 buff_adc[ADC_BUFFER_SIZE_FULL];//={[0 ... (ADC_BUFFER_SIZE_FULL-1)]=0}; // буффер результатов АЦП
 	u16 buff_to_filtring[SIZE_BUFF_TO_FILTRING];//={[0 ... (SIZE_BUFF_TO_FILTRING-1)]=0}; // буффер данных к фильтрации
 	s32 buff_rez_filtring[ADC_BUFFER_SIZE_HALF*2];//={[0 ... (ADC_BUFFER_SIZE_HALF*2-1)] = 0};// буффер результатов фильтрации действительная и мнимая части перемежаются
-	S_buff_rez s_buff_rez;      // буффер результатов измерений
+	S_buff_rez s_buff_rez_current;      // буффер результатов тока
+	S_buff_rez s_buff_rez_frequency;      // буффер результатов частоты
 	//структура параметров фильтра
 	S_par_filters filter_par;
 	S_coef_filter_integer s_coef_filter;

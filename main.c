@@ -74,7 +74,6 @@ int main(void)
 {
 	u8 k1;
 
-
 	//t_processing_mesuremen();
 
 
@@ -189,7 +188,7 @@ int main(void)
 #error  Inavalide task DEV_1 priopity (Ger)
 #endif
 	if(s_config_moduls.USER_CONFIG_FIELD(s,DEV_4).state){// если в конфигурации поточный модуль выключен
-		xTaskCreate(  TASK_PROCESSING(DEV_4), ( signed char * ) TASK_IDENT(DEV_4), 500,(void *)&s_config_moduls.USER_CONFIG_FIELD(s,DEV_4), TASK_PRIORITY(DEV_4), NULL );
+		xTaskCreate(  TASK_PROCESSING(DEV_4), ( signed char * ) TASK_IDENT(DEV_4), 700,(void *)&s_config_moduls.USER_CONFIG_FIELD(s,DEV_4), TASK_PRIORITY(DEV_4), NULL );
 	}
 #endif
 

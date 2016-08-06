@@ -18,23 +18,7 @@
 #if (BPF_F/ADC_BUFFER_SIZE_HALF)*ADC_BUFFER_SIZE_HALF!=BPF_F
 #error "processing_mesurement" init: BPF_F/ADC_BUFFER_SIZE_HALF must bee integer
 #endif
-/*
-S_ADC_init s_adc;
-S_Buffer_result s_buff_adc;
-u16 buff_adc[ADC_BUFFER_SIZE_FULL]={[0 ... (ADC_BUFFER_SIZE_FULL-1)]=0}; // буффер результатов АЦП
-u16 buff_to_filtring[SIZE_BUFF_TO_FILTRING]={[0 ... (SIZE_BUFF_TO_FILTRING-1)]=0}; // буффер данных к фильтрации
-s32 buff_rez_filtring[ADC_BUFFER_SIZE_HALF*2]={[0 ... (ADC_BUFFER_SIZE_HALF*2-1)] = 0};// буффер результатов фильтрации действительная и мнимая части перемежаются
-S_buff_rez s_buff_rez;      // буффер результатов измерений
 
-*/
-//u8 filtring_fun[0x175];
-//p_fun_proces_filterin_integer ram_filtring=(p_fun_proces_filterin_integer)&filtring_fun[1];
-
-/*
-//структура параметров фильтра
-S_par_filters filter_par;
-S_coef_filter_integer s_coef_filter;
-*/
 static xSemaphoreHandle SemphrADCBuffFull;
 extern S_address_oper_data s_address_oper_data;
 
@@ -86,13 +70,21 @@ void data_operation_sin(u16 *pa_sin, u16 length, float f1, float Am, float fi,fl
 //---------------задача processing_mesurement_global_config ---------
 void processing_mesurement_global_config(S_globall_buff * ps_globall_buff){
 //---------------------------------------------------------------
-//---------------------НАСТРОЙКА FIFO-----------------------------
+//---------------------НАСТРОЙКА FIFO для измерения тока---------
 //---------------------------------------------------------------
-	fifo_init(&ps_globall_buff->s_buff_rez.steck_rez,
-			  &ps_globall_buff->s_buff_rez.buff_summ[0],
-			  sizeof(ps_globall_buff->s_buff_rez.buff_summ[0]),
-			  BPF_F/ADC_BUFFER_SIZE_HALF
+	fifo_init(&ps_globall_buff->s_buff_rez_current.steck_rez,
+			  &ps_globall_buff->s_buff_rez_current.buff_summ[0],
+			  sizeof(ps_globall_buff->s_buff_rez_current.buff_summ[0]),
+			  REZ_BUFF_SIZE
 			  );
+//---------------------------------------------------------------
+//---------------------НАСТРОЙКА FIFO для измерения частоты------
+//---------------------------------------------------------------
+	fifo_init(&ps_globall_buff->s_buff_rez_frequency.steck_rez,
+			&ps_globall_buff->s_buff_rez_frequency.buff_summ[0],
+			sizeof(ps_globall_buff->s_buff_rez_frequency.buff_summ[0]),
+			REZ_BUFF_SIZE
+	);
 //---------------------------------------------------------------
 //---------------------НАСТРОЙКА ЦОС-----------------------------
 //---------------------------------------------------------------
@@ -103,7 +95,7 @@ void processing_mesurement_global_config(S_globall_buff * ps_globall_buff){
 	//рассчитываю целочисленные 2-байтные коэфициэнты фильтра
 	fun_proces_config_BPF_integer(&ps_globall_buff->filter_par,&ps_globall_buff->s_coef_filter,WINDOW_HAMMING );
 	// проверкаа фильтра
-	check_filter(ps_globall_buff);
+	//check_filter(ps_globall_buff);
 //---------------------------------------------------------------
 //---------------------DMA M2M-----------------------------
 //---------------------------------------------------------------
@@ -130,36 +122,77 @@ void processing_mesurement_global_config(S_globall_buff * ps_globall_buff){
 
 //расчитываю ток с учетом нового окна выборок
 void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
+	u8 secon_order=0;
+	double_t x_0, x_1, y_0, y_1, dx, dy, dl, temp_sum_dl=0, rez_1[22];
+	u8 k_1=0;
 	double_t temp_var=0;
-	double_t temp_sum=0;
+	double_t temp_sum_current=0;
 	double_t last_item;
 	s32 *p_last_item=&ps_globall_buff->buff_rez_filtring[ADC_BUFFER_SIZE_HALF*2-1];
 	s32 *p_re_rez=&ps_globall_buff->buff_rez_filtring[0];
 	s32 *p_im_rez=&ps_globall_buff->buff_rez_filtring[1];
+	double_t middle_rez;
+	u16 rez;
 	for(;p_im_rez<=p_last_item;){
+		//рассчитываю ток
 		temp_var=(double_t)(*p_re_rez)*(double_t)(*p_re_rez);//+(double_t)(*p_im_rez)*(double_t)(*p_im_rez);
 		temp_var+=(double_t)(*p_im_rez)*(double_t)(*p_im_rez);
 		temp_var=sqrt(temp_var);
-		temp_sum+=temp_var;
+		temp_sum_current+=temp_var;
+		// рассчитываю частоту
+		x_0=x_1;
+		y_0=y_1;
+		x_1=(double_t)(*p_re_rez)/temp_var;
+		y_1=(double_t)(*p_im_rez)/temp_var;
+
+		if(secon_order)
+		{
+			dx=(double_t)x_1-(double_t)x_0;
+			dy=(double_t)y_1-(double_t)y_0;
+			dx*=dx;
+			dy*=dy;
+			dl=dy+dx;
+			dl=sqrt(dl);
+			temp_sum_dl+=dl;
+			 rez_1[k_1]=dl;
+			 k_1++;
+		}
+		secon_order=1;
 		p_re_rez+=2;
 		p_im_rez+=2;
 	}
-	if(fifo_read_available(&ps_globall_buff->s_buff_rez.steck_rez) < (BPF_F/ADC_BUFFER_SIZE_HALF)){
-		fifo_write(&ps_globall_buff->s_buff_rez.steck_rez,1,&temp_sum);
-		ps_globall_buff->s_buff_rez.temp_sum+=temp_sum;
+
+	if(fifo_read_available(&ps_globall_buff->s_buff_rez_current.steck_rez) < REZ_BUFF_SIZE){
+		// ---------накопительный буффер тока-----------------------------
+		fifo_write(&ps_globall_buff->s_buff_rez_current.steck_rez,1,&temp_sum_current);
+		ps_globall_buff->s_buff_rez_current.temp_sum+=temp_sum_current;
+		// ---------накопительный буффер частоты-----------------------------
+		fifo_write(&ps_globall_buff->s_buff_rez_frequency.steck_rez,1,&temp_sum_dl);
+		ps_globall_buff->s_buff_rez_frequency.temp_sum+=temp_sum_dl;
 		return;
 	}
-	fifo_read(&ps_globall_buff->s_buff_rez.steck_rez,1,&last_item);
-	ps_globall_buff->s_buff_rez.temp_sum-=last_item;
-	ps_globall_buff->s_buff_rez.temp_sum+=temp_sum;
-	fifo_write(&ps_globall_buff->s_buff_rez.steck_rez,1,&temp_sum);
-	ps_globall_buff->s_buff_rez.rez_mes=(double_t)((double_t)ps_globall_buff->s_buff_rez.temp_sum/(double_t)(BPF_F));
-	double_t middle_rez;
-	u16 rez;
-	middle_rez=65.535*ps_globall_buff->s_buff_rez.rez_mes;
+	// --------------------расчитываю ток --------------------
+	fifo_read(&ps_globall_buff->s_buff_rez_current.steck_rez,1,&last_item);
+	ps_globall_buff->s_buff_rez_current.temp_sum-=last_item;
+	ps_globall_buff->s_buff_rez_current.temp_sum+=temp_sum_current;
+	fifo_write(&ps_globall_buff->s_buff_rez_current.steck_rez,1,&temp_sum_current);
+	ps_globall_buff->s_buff_rez_current.rez_mes=(double_t)((double_t)ps_globall_buff->s_buff_rez_current.temp_sum/(double_t)(REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF));
+	middle_rez=65.535*ps_globall_buff->s_buff_rez_current.rez_mes;
 	middle_rez=middle_rez/100000;
 	rez=(u16)middle_rez;
-	processing_mem_map_write_s_proces_object_modbus(&rez,1,s_address_oper_data.s_mesurement_address.rez_norm);
+	processing_mem_map_write_s_proces_object_modbus(&rez,1,s_address_oper_data.s_mesurement_address.rez_mes_current);
+	// --------------------расчитываю частоту --------------------
+	fifo_read(&ps_globall_buff->s_buff_rez_frequency.steck_rez,1,&last_item);
+	ps_globall_buff->s_buff_rez_frequency.temp_sum-=last_item;
+	ps_globall_buff->s_buff_rez_frequency.temp_sum+=temp_sum_dl;
+	fifo_write(&ps_globall_buff->s_buff_rez_frequency.steck_rez,1,&temp_sum_dl);
+	middle_rez=(double_t)ps_globall_buff->s_buff_rez_frequency.temp_sum/(double_t)(REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF-REZ_BUFF_SIZE);
+	// синус центрального угла, за теоремой синусов
+	middle_rez=0.5*middle_rez;
+	middle_rez=asin(middle_rez)*2; // угловая скорость
+	middle_rez*=ps_globall_buff->filter_par.F_adc/(2*M_PI);
+	rez=middle_rez*1000;
+	processing_mem_map_write_s_proces_object_modbus(&rez,1,s_address_oper_data.s_mesurement_address.rez_mes_frequency);
 }
 
 extern  S_dma_m2m dma_m2m_status;
@@ -223,9 +256,9 @@ void processing_mesurement_task(S_globall_buff * ps_globall_buff){
 
 u16 mesurement_calc_address_oper_reg(S_mesurement_address *ps_mesurement_address, u16 adres_start){
 	ps_mesurement_address->status_mesurement=adres_start;
-	ps_mesurement_address->rez_mrez_float=ps_mesurement_address->status_mesurement+NUM_REG_STATUS_MES;
-	ps_mesurement_address->rez_norm=ps_mesurement_address->rez_mrez_float+NUM_REG_REZ_FLOAT;
-	return (ps_mesurement_address->rez_norm+NUM_REG_REZ_NORM);
+	ps_mesurement_address->rez_mes_current=ps_mesurement_address->status_mesurement+NUM_REG_STATUS_MES;
+	ps_mesurement_address->rez_mes_frequency=ps_mesurement_address->rez_mes_current+NUM_REG_REZ_NORM;
+	return (ps_mesurement_address->rez_mes_frequency+NUM_REG_REZ_NORM);
 }
 
 
@@ -258,7 +291,9 @@ void t_processing_mesurement(void *pvParameters){
 		// жду пока заполниться буффер АЦП
 		xSemaphoreTake(SemphrADCBuffFull,portMAX_DELAY);
 		GPIO_SetBits(GPIOB,GPIO_Pin_9);
+
     	processing_mesurement_task(&s_global_buff);
+
     	GPIO_ResetBits(GPIOB,GPIO_Pin_9);
     }
 
