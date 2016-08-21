@@ -28,7 +28,7 @@ typedef struct{
 }S_processing_mes_adc_dma_callback;
 
 typedef struct{
-	u32 T_adc;           //Period ADC conversion, us
+	u32 F_adc;           //Period ADC conversion, us
 	ADC_TypeDef *ADC;
 	u16 channel_number;
 }S_ADC_init;

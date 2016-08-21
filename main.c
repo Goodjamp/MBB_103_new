@@ -34,7 +34,6 @@
 #include "my_task.h"
 
 
-
 /* Priorities at which the tasks are created. */
 #define mainQUEUE_RECEIVE_TASK_PRIORITY		1
 

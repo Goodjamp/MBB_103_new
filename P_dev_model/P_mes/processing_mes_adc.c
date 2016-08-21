@@ -84,13 +84,15 @@ PROCESSING_MES_ADC_STATUS processing_mes_adc_config_adc(S_ADC_init const* const 
 
 
 PROCESSING_MES_ADC_STATUS processing_mes_adc_config_tim(S_ADC_init const* const ps_adc_init){
+	u16 ccr2_calc;
 	RCC_ClocksTypeDef rcc_clock;
 
 	RCC_GetClocksFreq(&rcc_clock);
 
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2,ENABLE);
 	TIM2->PSC=(rcc_clock.PCLK1_Frequency*2)/1000000-1;
-	TIM2->CCR2=ps_adc_init->T_adc-1;
+	ccr2_calc=1000000/ps_adc_init->F_adc;
+	TIM2->CCR2=ccr2_calc-1;
 	TIM2->CR1|=TIM_CR1_ARPE;
 	TIM2->ARR=TIM2->CCR2;
 	TIM2->CCMR1 =0;

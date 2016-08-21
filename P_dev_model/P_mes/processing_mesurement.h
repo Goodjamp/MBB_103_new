@@ -25,14 +25,14 @@
 //Размер буффера результатов измерений (окна измерений) в к-ве ADC_BUFFER_SIZE_HALF
 // тоесть результаты усредняются в окне, которое равно (отсчетов) REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF
 //                                                     (время)    REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF/BPF_F
-#define REZ_BUFF_SIZE 10
+#define REZ_BUFF_SIZE 20
 
 //---------------ПАРАМЕТРЫ ФИЛЬТРА--------------------
 //Центральная частота фильтра
 #define BPF_MIDDLE_F50        50
 #define BPF_MIDDLE_F60        60
 //Полоса пропускания фильтра
-#define BPF_BEND_PASS         50
+#define BPF_BEND_PASS         37
 //Порядок фильтра
 #define BPF_Q                 Q_MAX
 //Частота дискретизации
@@ -46,6 +46,8 @@
 #define V_REF         3
 // разряджность измерерний - 12 бит
 #define BIT_REF       4095
+// максимальный размер структуры калибровочных данных
+#define CALIB_DATA_MAX_SIZE   100
 
 typedef struct{
 	S_fifo_steak steck_rez;
@@ -54,6 +56,7 @@ typedef struct{
 	double_t rez_mes;
 }S_buff_rez;
 
+// Структура со всеми настройками, буффервми
 typedef struct{
 	S_ADC_init s_adc;
 	S_Buffer_result s_buff_adc;
@@ -66,6 +69,19 @@ typedef struct{
 	S_par_filters filter_par;
 	S_coef_filter_integer s_coef_filter;
 }S_globall_buff;
+
+// Структура с калибровочными данными
+typedef struct{
+	u32 num_point;
+	double calib_curve[CALIB_DATA_MAX_SIZE][2];
+}S_calib;
+//
+typedef enum{
+	MES_OK=0,
+	MES_OUT_OF_CALIB_RAMGE=1
+}MES_STATUS;
+#define KOD_VAL(X)     s_calib_current.calib_curve[X][0]
+#define CURRENT_VAL(X) s_calib_current.calib_curve[X][1]
 
 
 void check_filter(S_globall_buff * ps_globall_buff);

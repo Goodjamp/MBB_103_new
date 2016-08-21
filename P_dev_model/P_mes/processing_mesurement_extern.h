@@ -17,8 +17,10 @@
 
 // Количекство статус-регистров процнсса messurement
 #define NUM_REG_STATUS_MES      1
-// к-во регистров для нормированного результата измерения
-#define NUM_REG_REZ_NORM       sizeof(u16)/sizeof(S_proces_object_modbus)
+// к-во регистров для нормированного результата измерения типа U16
+#define NUM_REG_REZ_U16       sizeof(u16)/sizeof(S_proces_object_modbus)
+// к-во регистров для нормированного результата измерения типа DOUBLE
+#define NUM_REG_REZ_DOUBLE       sizeof(double)/sizeof(S_proces_object_modbus)
 
 
 #pragma pack(push,1)
@@ -26,8 +28,9 @@
 //-----------------------------Адреса оперативных регистров процесса ТС---------------------------------------------------------------
 typedef struct{
 	u16  status_mesurement; // статус регистры mesurement
-	u16  rez_mes_current;    // адрес в памяти МК регистров результата измерения тока
-	u16  rez_mes_frequency;  // адрес в памяти МК регистров результата измерения частоты
+	u16  rez_mes_current;    // адрес в карте памяти результата измерения тока
+	u16  rez_mes_frequency;  // адрес в карте памяти результата измерения частоты
+	u16  mes_current_double; // адрес в карте памяти кода результатов измерения тока
 } S_mesurement_address;
 //--------------------------------------------------------------------------------------------------------------------------------------
 
@@ -35,8 +38,9 @@ typedef struct{
 //----------------------------- Оперативные регистры процесса ТС------------------------------------------------------------------------
 typedef struct{
 	S_proces_object_modbus  status_mesurement; // статус регистры mesurement
-	S_proces_object_modbus  rez_mes_current[NUM_REG_REZ_NORM];  // результат измерений тока
-	S_proces_object_modbus  rez_mes_frequency[NUM_REG_REZ_NORM]; // результат измерений частоты х1000
+	S_proces_object_modbus  rez_mes_current[NUM_REG_REZ_U16];  // результат измерений тока
+	S_proces_object_modbus  rez_mes_frequency[NUM_REG_REZ_U16]; // результат измерений частоты х1000
+	S_proces_object_modbus  rez_mes_current_kod[NUM_REG_REZ_DOUBLE]; // результат измерений частоты х1000
 } S_mesurement_oper_data;
 //--------------------------------------------------------------------------------------------------------------------------------------
 
@@ -44,8 +48,8 @@ typedef struct{
 //----------------------------- Конфигурация процесса ТС--------------------------------------------------------------------------------
 typedef struct{
 	FunctionalState state;                           // состояние програмного модуля: ENABLE/DISABLE
-	u16 frequency;                                   // время гистерезисса прийома ТС frequency
-    u16 a_r[5];                                       // место настрок для будущего пользования
+	u16 frequency;                                   // частота измеряимого тока
+    u16 a_r[5];                                      // место настрок для будущего пользования
 }S_mesurement_user_config;
 //--------------------------------------------------------------------------------------------------------------------------------------
 #pragma pack(pop)

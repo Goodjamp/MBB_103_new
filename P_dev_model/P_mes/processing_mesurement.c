@@ -18,13 +18,17 @@
 #if (BPF_F/ADC_BUFFER_SIZE_HALF)*ADC_BUFFER_SIZE_HALF!=BPF_F
 #error "processing_mesurement" init: BPF_F/ADC_BUFFER_SIZE_HALF must bee integer
 #endif
+//КАЛИБРОВОЧНАЯ КРИВАЯ ДЛЯ ПЕРЕЧСЧЕТА ЗНАЧЕТА АБСОЛЮТНОГО ЗНАЧЕНИЯ ТОКА
+const S_calib s_calib_current={
+	#include "processing_mes_calib_current.h"
+};
 
 static xSemaphoreHandle SemphrADCBuffFull;
 extern S_address_oper_data s_address_oper_data;
 
 // для проверки
     #define SIZE_ARRAY_TIME   10
-	#define SIZE_SIN      120
+	#define SIZE_SIN          120
 	u16 a_sin[SIZE_SIN];
 	s32 rez_filt[SIZE_SIN*3];
 
@@ -67,7 +71,10 @@ void data_operation_sin(u16 *pa_sin, u16 length, float f1, float Am, float fi,fl
 
 
 
-//---------------задача processing_mesurement_global_config ---------
+//---------------функция processing_mesurement_global_config ------------------
+// функция processing_mesurement_global_config - выполняет конфигурацию все элементов задачи измерений
+// входные аргументы:
+//*ps_globall_buff - указатель на структуру в которой описаны все єлементы задачи измерений
 void processing_mesurement_global_config(S_globall_buff * ps_globall_buff){
 //---------------------------------------------------------------
 //---------------------НАСТРОЙКА FIFO для измерения тока---------
@@ -105,7 +112,7 @@ void processing_mesurement_global_config(S_globall_buff * ps_globall_buff){
 //---------------------------------------------------------------
 	//Параметры АЦП
 	ps_globall_buff->s_adc.ADC=ADC1;
-	ps_globall_buff->s_adc.T_adc=BPF_F;
+	ps_globall_buff->s_adc.F_adc=BPF_F;
 	ps_globall_buff->s_adc.channel_number=0;
 	// параметры буффера АЦП
 	ps_globall_buff->s_buff_adc.adc_buffer_size=ADC_BUFFER_SIZE_FULL;
@@ -120,10 +127,14 @@ void processing_mesurement_global_config(S_globall_buff * ps_globall_buff){
 
 
 
-//расчитываю ток с учетом нового окна выборок
+//---------------функция processing_mesurement_calc ------------------
+// функция processing_mesurement_calc - выполняет расчет значений измеренных величин (ток и частота)
+// по результатам фильтрации
+// входные аргументы:
+//*ps_globall_buff - указатель на структуру в которой описаны все єлементы задачи измерений
 void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 	u8 secon_order=0;
-	double_t x_0, x_1, y_0, y_1, dx, dy, dl, temp_sum_dl=0, rez_1[22];
+	double_t x_0, x_1, y_0, y_1, dx, dy, dl, temp_sum_dl=0;
 	u8 k_1=0;
 	double_t temp_var=0;
 	double_t temp_sum_current=0;
@@ -154,8 +165,7 @@ void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 			dl=dy+dx;
 			dl=sqrt(dl);
 			temp_sum_dl+=dl;
-			 rez_1[k_1]=dl;
-			 k_1++;
+			k_1++;
 		}
 		secon_order=1;
 		p_re_rez+=2;
@@ -177,26 +187,49 @@ void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 	ps_globall_buff->s_buff_rez_current.temp_sum+=temp_sum_current;
 	fifo_write(&ps_globall_buff->s_buff_rez_current.steck_rez,1,&temp_sum_current);
 	ps_globall_buff->s_buff_rez_current.rez_mes=(double_t)((double_t)ps_globall_buff->s_buff_rez_current.temp_sum/(double_t)(REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF));
+	//записываю "сырой", не калиброванныц, код измренного тока
+	processing_mem_map_write_s_proces_object_modbus((u16*)&ps_globall_buff->s_buff_rez_current.rez_mes,NUM_REG_REZ_DOUBLE,s_address_oper_data.s_mesurement_address.mes_current_double);
 	middle_rez=65.535*ps_globall_buff->s_buff_rez_current.rez_mes;
-	middle_rez=middle_rez/100000;
+	middle_rez=middle_rez/1000000;
 	rez=(u16)middle_rez;
-	processing_mem_map_write_s_proces_object_modbus(&rez,1,s_address_oper_data.s_mesurement_address.rez_mes_current);
+	processing_mem_map_write_s_proces_object_modbus(&rez,NUM_REG_REZ_U16,s_address_oper_data.s_mesurement_address.rez_mes_current);
 	// --------------------расчитываю частоту --------------------
 	fifo_read(&ps_globall_buff->s_buff_rez_frequency.steck_rez,1,&last_item);
 	ps_globall_buff->s_buff_rez_frequency.temp_sum-=last_item;
 	ps_globall_buff->s_buff_rez_frequency.temp_sum+=temp_sum_dl;
 	fifo_write(&ps_globall_buff->s_buff_rez_frequency.steck_rez,1,&temp_sum_dl);
 	middle_rez=(double_t)ps_globall_buff->s_buff_rez_frequency.temp_sum/(double_t)(REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF-REZ_BUFF_SIZE);
-	// синус центрального угла, за теоремой синусов
+	// синус центрального угла
 	middle_rez=0.5*middle_rez;
 	middle_rez=asin(middle_rez)*2; // угловая скорость
 	middle_rez*=ps_globall_buff->filter_par.F_adc/(2*M_PI);
 	rez=middle_rez*1000;
-	processing_mem_map_write_s_proces_object_modbus(&rez,1,s_address_oper_data.s_mesurement_address.rez_mes_frequency);
+	processing_mem_map_write_s_proces_object_modbus(&rez,NUM_REG_REZ_U16,s_address_oper_data.s_mesurement_address.rez_mes_frequency);
 }
 
-extern  S_dma_m2m dma_m2m_status;
 
+//---------------функция processing_mesurement_calc_clib_data ------------------
+// функция processing_mesurement_calc_clib_data - выполняет расчет абсолютного значения тока по
+// калибровочной кривой
+// входные аргументы:
+//
+MES_STATUS processing_mesurement_calc_clib_data(double mes_cod, double *rez_current){
+	u8 counter;
+	for(counter=0;counter<(s_calib_current.num_point-1);counter++){
+		//ищем диапазон значений калибровки кода в котором находиться запрашиваимый код
+		if((mes_cod >= KOD_VAL(counter))&&(mes_cod < KOD_VAL(counter+1))){
+			// формула для рассчета ((x1-x2)/(y1-y2))*(mes_cod-x1)+y1
+			(*rez_current)=(KOD_VAL(counter)-KOD_VAL(counter+1))/(CURRENT_VAL(counter)-CURRENT_VAL(counter+1))*\
+					       (mes_cod-KOD_VAL(counter))+CURRENT_VAL(counter);
+			return MES_OK;
+		}
+	}
+	return MES_OUT_OF_CALIB_RAMGE;
+}
+
+
+
+extern  S_dma_m2m dma_m2m_status;
 //---------------задача processing_mesurement_task ------------------
 void processing_mesurement_task(S_globall_buff * ps_globall_buff){
 	DMA_M2M_STATYS qw=1;
@@ -257,8 +290,9 @@ void processing_mesurement_task(S_globall_buff * ps_globall_buff){
 u16 mesurement_calc_address_oper_reg(S_mesurement_address *ps_mesurement_address, u16 adres_start){
 	ps_mesurement_address->status_mesurement=adres_start;
 	ps_mesurement_address->rez_mes_current=ps_mesurement_address->status_mesurement+NUM_REG_STATUS_MES;
-	ps_mesurement_address->rez_mes_frequency=ps_mesurement_address->rez_mes_current+NUM_REG_REZ_NORM;
-	return (ps_mesurement_address->rez_mes_frequency+NUM_REG_REZ_NORM);
+	ps_mesurement_address->rez_mes_frequency=ps_mesurement_address->rez_mes_current+NUM_REG_REZ_U16;
+	ps_mesurement_address->mes_current_double=ps_mesurement_address->rez_mes_frequency+NUM_REG_REZ_U16;
+	return (ps_mesurement_address->rez_mes_frequency+NUM_REG_REZ_DOUBLE);
 }
 
 

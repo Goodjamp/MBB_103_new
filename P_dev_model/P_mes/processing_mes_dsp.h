@@ -19,7 +19,7 @@
 #define ERROR_BAD_TYPE    2
 
 // Ïîðÿäîê ôèëüòðà
-#define Q_MAX  120
+#define Q_MAX  160
 
 // ---------------ÌÀÊÐÎÑÛ-----------------
 #define MODUL(X)     X>=0 ? (X):((-1)*X)
