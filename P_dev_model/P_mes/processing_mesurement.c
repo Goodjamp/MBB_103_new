@@ -23,12 +23,13 @@ const S_calib s_calib_current={
 	#include "processing_mes_calib_current.h"
 };
 
+
 static xSemaphoreHandle SemphrADCBuffFull;
 extern S_address_oper_data s_address_oper_data;
 
 // для проверки
     #define SIZE_ARRAY_TIME   10
-	#define SIZE_SIN          120
+	#define SIZE_SIN         1// 120
 	u16 a_sin[SIZE_SIN];
 	s32 rez_filt[SIZE_SIN*3];
 
@@ -189,8 +190,8 @@ void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 	ps_globall_buff->s_buff_rez_current.rez_mes=(double_t)((double_t)ps_globall_buff->s_buff_rez_current.temp_sum/(double_t)(REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF));
 	//записываю "сырой", не калиброванныц, код измренного тока
 	processing_mem_map_write_s_proces_object_modbus((u16*)&ps_globall_buff->s_buff_rez_current.rez_mes,NUM_REG_REZ_DOUBLE,s_address_oper_data.s_mesurement_address.mes_current_double);
-	middle_rez=65.535*ps_globall_buff->s_buff_rez_current.rez_mes;
-	middle_rez=middle_rez/1000000;
+	processing_mesurement_calc_clib_data(ps_globall_buff->s_buff_rez_current.rez_mes, &middle_rez);
+	middle_rez*=10000;
 	rez=(u16)middle_rez;
 	processing_mem_map_write_s_proces_object_modbus(&rez,NUM_REG_REZ_U16,s_address_oper_data.s_mesurement_address.rez_mes_current);
 	// --------------------расчитываю частоту --------------------
@@ -218,8 +219,8 @@ MES_STATUS processing_mesurement_calc_clib_data(double mes_cod, double *rez_curr
 	for(counter=0;counter<(s_calib_current.num_point-1);counter++){
 		//ищем диапазон значений калибровки кода в котором находиться запрашиваимый код
 		if((mes_cod >= KOD_VAL(counter))&&(mes_cod < KOD_VAL(counter+1))){
-			// формула для рассчета ((x1-x2)/(y1-y2))*(mes_cod-x1)+y1
-			(*rez_current)=(KOD_VAL(counter)-KOD_VAL(counter+1))/(CURRENT_VAL(counter)-CURRENT_VAL(counter+1))*\
+			// формула для рассчета ((y1-y2)/(x1-x2))*(mes_cod-x1)+y1
+			(*rez_current)=(CURRENT_VAL(counter)-CURRENT_VAL(counter+1))/(KOD_VAL(counter)-KOD_VAL(counter+1))*\
 					       (mes_cod-KOD_VAL(counter))+CURRENT_VAL(counter);
 			return MES_OK;
 		}

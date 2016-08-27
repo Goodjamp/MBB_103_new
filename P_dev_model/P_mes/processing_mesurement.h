@@ -86,6 +86,7 @@ typedef enum{
 
 void check_filter(S_globall_buff * ps_globall_buff);
 void data_operation_sin(u16 *pa_sin, u16 length, float f1, float Am, float fi,float Fadc);
+MES_STATUS processing_mesurement_calc_clib_data(double mes_cod, double *rez_current);
 void processing_mesurement_global_config(S_globall_buff * ps_globall_buff );
 void processing_mesurement_calc(S_globall_buff * ps_globall_buff);
 void processing_mesurement_task(S_globall_buff * ps_globall_buff);
