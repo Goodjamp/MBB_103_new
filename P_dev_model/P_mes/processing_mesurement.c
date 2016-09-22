@@ -18,10 +18,16 @@
 #if (BPF_F/ADC_BUFFER_SIZE_HALF)*ADC_BUFFER_SIZE_HALF!=BPF_F
 #error "processing_mesurement" init: BPF_F/ADC_BUFFER_SIZE_HALF must bee integer
 #endif
-//КАЛИБРОВОЧНАЯ КРИВАЯ ДЛЯ ПЕРЕЧСЧЕТА ЗНАЧЕТА АБСОЛЮТНОГО ЗНАЧЕНИЯ ТОКА
+//КАЛИБРОВОЧНАЯ КРИВАЯ ДЛЯ ПЕРЕЧСЧЕТА АБСОЛЮТНОГО ЗНАЧЕНИЯ ТОКА
 const S_calib s_calib_current={
 	#include "processing_mes_calib_current.h"
 };
+
+S_globall_buff s_global_buff;
+
+double buff_sum_rez_current[REZ_BUFF_SIZE];
+double buff_summ_rez_frequency[REZ_BUFF_SIZE];
+
 
 
 static xSemaphoreHandle SemphrADCBuffFull;
@@ -70,29 +76,27 @@ void data_operation_sin(u16 *pa_sin, u16 length, float f1, float Am, float fi,fl
 }
 
 
-
-
 //---------------функция processing_mesurement_global_config ------------------
 // функция processing_mesurement_global_config - выполняет конфигурацию все элементов задачи измерений
 // входные аргументы:
 //*ps_globall_buff - указатель на структуру в которой описаны все єлементы задачи измерений
-void processing_mesurement_global_config(S_globall_buff * ps_globall_buff){
+static void processing_mesurement_global_config(S_globall_buff * ps_globall_buff){
 //---------------------------------------------------------------
 //---------------------НАСТРОЙКА FIFO для измерения тока---------
 //---------------------------------------------------------------
 	fifo_init(&ps_globall_buff->s_buff_rez_current.steck_rez,
-			  &ps_globall_buff->s_buff_rez_current.buff_summ[0],
-			  sizeof(ps_globall_buff->s_buff_rez_current.buff_summ[0]),
+			  &buff_sum_rez_current[0],
+			  sizeof(buff_sum_rez_current[0]),
 			  REZ_BUFF_SIZE
 			  );
 //---------------------------------------------------------------
 //---------------------НАСТРОЙКА FIFO для измерения частоты------
 //---------------------------------------------------------------
 	fifo_init(&ps_globall_buff->s_buff_rez_frequency.steck_rez,
-			&ps_globall_buff->s_buff_rez_frequency.buff_summ[0],
-			sizeof(ps_globall_buff->s_buff_rez_frequency.buff_summ[0]),
-			REZ_BUFF_SIZE
-	);
+			  &buff_summ_rez_frequency[0],
+			  sizeof(buff_summ_rez_frequency[0]),
+			  REZ_BUFF_SIZE
+	          );
 //---------------------------------------------------------------
 //---------------------НАСТРОЙКА ЦОС-----------------------------
 //---------------------------------------------------------------
@@ -124,8 +128,65 @@ void processing_mesurement_global_config(S_globall_buff * ps_globall_buff){
 	ps_globall_buff->s_buff_adc.f_mes_complete=0;
 	// инициилизация АЦП + ДМА
 	processing_mes_adc_config(&ps_globall_buff->s_adc,&ps_globall_buff->s_buff_adc);
+	//---------------------------------------------------------------
+	//---------------------НАСТРОЙКА КАЛИБРОВКИ-----------------------------
+	//---------------------------------------------------------------
 }
 
+
+//---------------функция processing_mesurement_calib_init ------------------
+// функция processing_mesurement_calib_init - выполняет расчет коэффициентов прямой калибровки
+static void processing_mesurement_calib_init(void){
+	u8 counter;
+	double_t sum_x=0;
+	double_t sum_x2=0;
+	double_t sum_y=0;
+	double_t sum_xy;
+	for(counter=0;counter<s_calib_current.num_point;counter++){
+		sum_x+=KOD_VAL(counter);
+		sum_x2+=KOD_VAL(counter)*KOD_VAL(counter);
+		sum_y=CURRENT_VAL(counter);
+		sum_xy+=KOD_VAL(counter)*CURRENT_VAL(counter);
+	}
+	/*
+	K_line=(s_calib_current.num_point*sum_xy-sum_x*sum_y)/
+			(s_calib_current.num_point*sum_x2-sum_x*sum_x);
+	B_line=(sum_y-K_line*sum_x)/s_calib_current.num_point;
+*/
+}
+
+
+//---------------функция processing_mesurement_update_rez ------------------
+// функция processing_mesurement_update_rez -
+// входные аргументы:
+//
+static void processing_mesurement_update_rez(S_buff_rez *ps_data_staruct,double_t *p_new_data){
+	double_t last_item;
+	fifo_read(&ps_data_staruct->steck_rez,1,&last_item);
+	ps_data_staruct->temp_sum-=last_item;
+	ps_data_staruct->temp_sum+=(*p_new_data);
+	fifo_write(&ps_data_staruct->steck_rez,1,p_new_data);
+}
+
+
+//---------------функция processing_mesurement_calc_clib_data ------------------
+// функция processing_mesurement_calc_clib_data - выполняет расчет абсолютного значения тока по
+// калибровочной кривой
+// входные аргументы:
+//
+static MES_STATUS processing_mesurement_calc_calib_data(double mes_cod, double *rez_current){
+	u8 counter;
+	for(counter=0;counter<(s_calib_current.num_point-1);counter++){
+		//ищем диапазон значений калибровки кода в котором находиться запрашиваимый код
+		if((mes_cod >= KOD_VAL(counter))&&(mes_cod < KOD_VAL(counter+1))){
+			// формула для рассчета ((y1-y2)/(x1-x2))*(mes_cod-x1)+y1
+			(*rez_current)=(CURRENT_VAL(counter)-CURRENT_VAL(counter+1))/(KOD_VAL(counter)-KOD_VAL(counter+1))*\
+					       (mes_cod-KOD_VAL(counter))+CURRENT_VAL(counter);
+			return MES_OK;
+		}
+	}
+	return MES_OUT_OF_CALIB_RAMGE;
+}
 
 
 //---------------функция processing_mesurement_calc ------------------
@@ -133,7 +194,8 @@ void processing_mesurement_global_config(S_globall_buff * ps_globall_buff){
 // по результатам фильтрации
 // входные аргументы:
 //*ps_globall_buff - указатель на структуру в которой описаны все єлементы задачи измерений
-void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
+static void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
+	static double last_mes_mem=_3_SIGMA;
 	u8 secon_order=0;
 	double_t x_0, x_1, y_0, y_1, dx, dy, dl, temp_sum_dl=0;
 	u8 k_1=0;
@@ -143,7 +205,7 @@ void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 	s32 *p_last_item=&ps_globall_buff->buff_rez_filtring[ADC_BUFFER_SIZE_HALF*2-1];
 	s32 *p_re_rez=&ps_globall_buff->buff_rez_filtring[0];
 	s32 *p_im_rez=&ps_globall_buff->buff_rez_filtring[1];
-	double_t middle_rez;
+	double_t middle_rez=0;
 	u16 rez;
 	for(;p_im_rez<=p_last_item;){
 		//рассчитываю ток
@@ -182,23 +244,28 @@ void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 		ps_globall_buff->s_buff_rez_frequency.temp_sum+=temp_sum_dl;
 		return;
 	}
+
+
 	// --------------------расчитываю ток --------------------
-	fifo_read(&ps_globall_buff->s_buff_rez_current.steck_rez,1,&last_item);
-	ps_globall_buff->s_buff_rez_current.temp_sum-=last_item;
-	ps_globall_buff->s_buff_rez_current.temp_sum+=temp_sum_current;
-	fifo_write(&ps_globall_buff->s_buff_rez_current.steck_rez,1,&temp_sum_current);
+	processing_mesurement_update_rez(&ps_globall_buff->s_buff_rez_current,&temp_sum_current);
 	ps_globall_buff->s_buff_rez_current.rez_mes=(double_t)((double_t)ps_globall_buff->s_buff_rez_current.temp_sum/(double_t)(REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF));
+
+	// проверяю на порог 3*сигма
+	/*
+	if((ps_globall_buff->s_buff_rez_current.rez_mes <(last_mes_mem+_3_SIGMA))&&
+	   (ps_globall_buff->s_buff_rez_current.rez_mes >(last_mes_mem-_3_SIGMA))){
+		return;
+	}
+*/
+	last_mes_mem=ps_globall_buff->s_buff_rez_current.rez_mes;
 	//записываю "сырой", не калиброванныц, код измренного тока
 	processing_mem_map_write_s_proces_object_modbus((u16*)&ps_globall_buff->s_buff_rez_current.rez_mes,NUM_REG_REZ_DOUBLE,s_address_oper_data.s_mesurement_address.mes_current_double);
-	processing_mesurement_calc_clib_data(ps_globall_buff->s_buff_rez_current.rez_mes, &middle_rez);
-	middle_rez*=10000;
+	processing_mesurement_calc_calib_data(ps_globall_buff->s_buff_rez_current.rez_mes, &middle_rez);
+	middle_rez*=1;
 	rez=(u16)middle_rez;
 	processing_mem_map_write_s_proces_object_modbus(&rez,NUM_REG_REZ_U16,s_address_oper_data.s_mesurement_address.rez_mes_current);
 	// --------------------расчитываю частоту --------------------
-	fifo_read(&ps_globall_buff->s_buff_rez_frequency.steck_rez,1,&last_item);
-	ps_globall_buff->s_buff_rez_frequency.temp_sum-=last_item;
-	ps_globall_buff->s_buff_rez_frequency.temp_sum+=temp_sum_dl;
-	fifo_write(&ps_globall_buff->s_buff_rez_frequency.steck_rez,1,&temp_sum_dl);
+	processing_mesurement_update_rez(&ps_globall_buff->s_buff_rez_frequency,&temp_sum_dl);
 	middle_rez=(double_t)ps_globall_buff->s_buff_rez_frequency.temp_sum/(double_t)(REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF-REZ_BUFF_SIZE);
 	// синус центрального угла
 	middle_rez=0.5*middle_rez;
@@ -206,26 +273,6 @@ void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 	middle_rez*=ps_globall_buff->filter_par.F_adc/(2*M_PI);
 	rez=middle_rez*1000;
 	processing_mem_map_write_s_proces_object_modbus(&rez,NUM_REG_REZ_U16,s_address_oper_data.s_mesurement_address.rez_mes_frequency);
-}
-
-
-//---------------функция processing_mesurement_calc_clib_data ------------------
-// функция processing_mesurement_calc_clib_data - выполняет расчет абсолютного значения тока по
-// калибровочной кривой
-// входные аргументы:
-//
-MES_STATUS processing_mesurement_calc_clib_data(double mes_cod, double *rez_current){
-	u8 counter;
-	for(counter=0;counter<(s_calib_current.num_point-1);counter++){
-		//ищем диапазон значений калибровки кода в котором находиться запрашиваимый код
-		if((mes_cod >= KOD_VAL(counter))&&(mes_cod < KOD_VAL(counter+1))){
-			// формула для рассчета ((y1-y2)/(x1-x2))*(mes_cod-x1)+y1
-			(*rez_current)=(CURRENT_VAL(counter)-CURRENT_VAL(counter+1))/(KOD_VAL(counter)-KOD_VAL(counter+1))*\
-					       (mes_cod-KOD_VAL(counter))+CURRENT_VAL(counter);
-			return MES_OK;
-		}
-	}
-	return MES_OUT_OF_CALIB_RAMGE;
 }
 
 
@@ -241,6 +288,7 @@ void processing_mesurement_task(S_globall_buff * ps_globall_buff){
 		GPIO_SetBits(GPIOB,GPIO_Pin_9);
 
 		ps_globall_buff->s_buff_adc.f_mes_complete=0;
+		//
 		//copy temp data ОТКУДА - КУДА
 /*
 		memcopy_dma(DMA_TX_2BYTE,\
@@ -312,7 +360,7 @@ void t_processing_mesurement(void *pvParameters){
 	GPIO_Init(GPIOB,&gpio_service);
 	GPIO_ResetBits(GPIOB,GPIO_Pin_9);
 
-	S_globall_buff s_global_buff;
+	//S_globall_buff s_global_buff;
 	// Семафор для разблокировки задачи обработки результатов АЦП по факту
     // заполнения буффера АЦП
 	 vSemaphoreCreateBinary(SemphrADCBuffFull);
