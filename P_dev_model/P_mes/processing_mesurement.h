@@ -17,6 +17,9 @@
 #include "fifo.h"
 
 
+//МЕТОД РАСЧЕТА РЕЗУЛЬТАТОВ ИЗМЕРЕНИЙ
+#define CALC_LINE
+
 // --------------ПАРАМЕТРЫ БУФФЕРОВ АЦП----------------
 //Полный размер буффера
 #define ADC_BUFFER_SIZE_FULL  40
@@ -46,10 +49,20 @@
 #define _3_SIGMA  			  90638
 // опорное напряжение
 #define V_REF         3
-// разряджность измерерний - 12 бит
+// разрядность измерерний - 12 бит
 #define BIT_REF       4095
 // максимальный размер структуры калибровочных данных
 #define CALIB_DATA_MAX_SIZE   100
+
+#define KOD_VAL(X)     s_calib_current.calib_curve[X][0]
+#define CURRENT_VAL(X) s_calib_current.calib_curve[X][1]
+
+//
+typedef enum{
+	MES_OK=0,
+	MES_OUT_OF_CALIB_RAMGE=1
+}MES_STATUS;
+
 
 typedef struct{
 	S_fifo_steak steck_rez;
@@ -57,6 +70,8 @@ typedef struct{
 	double_t temp_sum;
 	double_t rez_mes;
 }S_buff_rez;
+
+
 
 // Структура со всеми настройками, буферами
 typedef struct{
@@ -77,15 +92,6 @@ typedef struct{
 	u32 num_point;
 	double calib_curve[CALIB_DATA_MAX_SIZE][2];
 }S_calib;
-
-//
-typedef enum{
-	MES_OK=0,
-	MES_OUT_OF_CALIB_RAMGE=1
-}MES_STATUS;
-
-#define KOD_VAL(X)     s_calib_current.calib_curve[X][0]
-#define CURRENT_VAL(X) s_calib_current.calib_curve[X][1]
 
 
 void check_filter(S_globall_buff * ps_globall_buff);

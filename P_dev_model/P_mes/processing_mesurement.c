@@ -27,6 +27,8 @@ S_globall_buff s_global_buff;
 
 double buff_sum_rez_current[REZ_BUFF_SIZE];
 double buff_summ_rez_frequency[REZ_BUFF_SIZE];
+static double K_line;
+static double B_line;
 
 
 
@@ -135,7 +137,7 @@ static void processing_mesurement_global_config(S_globall_buff * ps_globall_buff
 
 
 //---------------функция processing_mesurement_calib_init ------------------
-// функция processing_mesurement_calib_init - выполняет расчет коэффициентов прямой калибровки
+// функция processing_mesurement_calib_init - выполняет расчет коэффициентов прямой методом наименших квадратов
 static void processing_mesurement_calib_init(void){
 	u8 counter;
 	double_t sum_x=0;
@@ -145,28 +147,28 @@ static void processing_mesurement_calib_init(void){
 	for(counter=0;counter<s_calib_current.num_point;counter++){
 		sum_x+=KOD_VAL(counter);
 		sum_x2+=KOD_VAL(counter)*KOD_VAL(counter);
-		sum_y=CURRENT_VAL(counter);
+		sum_y+=CURRENT_VAL(counter);
 		sum_xy+=KOD_VAL(counter)*CURRENT_VAL(counter);
 	}
-	/*
 	K_line=(s_calib_current.num_point*sum_xy-sum_x*sum_y)/
 			(s_calib_current.num_point*sum_x2-sum_x*sum_x);
 	B_line=(sum_y-K_line*sum_x)/s_calib_current.num_point;
-*/
 }
 
 
-//---------------функция processing_mesurement_update_rez ------------------
-// функция processing_mesurement_update_rez -
+//---------------функция processing_mesurement_calc_calib_data_line ------------------
+// функция processing_mesurement_calc_calib_data_line - выполняет расчет абсолютного значения тока по
+// пряммой рассчитаной методом наименших квадратов
 // входные аргументы:
 //
-static void processing_mesurement_update_rez(S_buff_rez *ps_data_staruct,double_t *p_new_data){
-	double_t last_item;
-	fifo_read(&ps_data_staruct->steck_rez,1,&last_item);
-	ps_data_staruct->temp_sum-=last_item;
-	ps_data_staruct->temp_sum+=(*p_new_data);
-	fifo_write(&ps_data_staruct->steck_rez,1,p_new_data);
+static MES_STATUS processing_mesurement_calc_calib_data_line(double mes_cod, double *rez_current){
+
+	*rez_current = K_line*mes_cod+B_line;
+
+	return MES_OK;
 }
+
+
 
 
 //---------------функция processing_mesurement_calc_clib_data ------------------
@@ -186,6 +188,19 @@ static MES_STATUS processing_mesurement_calc_calib_data(double mes_cod, double *
 		}
 	}
 	return MES_OUT_OF_CALIB_RAMGE;
+}
+
+
+//---------------функция processing_mesurement_update_rez ------------------
+// функция processing_mesurement_update_rez -
+// входные аргументы:
+//
+static void processing_mesurement_update_rez(S_buff_rez *ps_data_staruct,double_t *p_new_data){
+	double_t last_item;
+	fifo_read(&ps_data_staruct->steck_rez,1,&last_item);
+	ps_data_staruct->temp_sum-=last_item;
+	ps_data_staruct->temp_sum+=(*p_new_data);
+	fifo_write(&ps_data_staruct->steck_rez,1,p_new_data);
 }
 
 
@@ -245,7 +260,6 @@ static void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 		return;
 	}
 
-
 	// --------------------расчитываю ток --------------------
 	processing_mesurement_update_rez(&ps_globall_buff->s_buff_rez_current,&temp_sum_current);
 	ps_globall_buff->s_buff_rez_current.rez_mes=(double_t)((double_t)ps_globall_buff->s_buff_rez_current.temp_sum/(double_t)(REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF));
@@ -256,11 +270,15 @@ static void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 	   (ps_globall_buff->s_buff_rez_current.rez_mes >(last_mes_mem-_3_SIGMA))){
 		return;
 	}
-*/
+	 */
 	last_mes_mem=ps_globall_buff->s_buff_rez_current.rez_mes;
 	//записываю "сырой", не калиброванныц, код измренного тока
 	processing_mem_map_write_s_proces_object_modbus((u16*)&ps_globall_buff->s_buff_rez_current.rez_mes,NUM_REG_REZ_DOUBLE,s_address_oper_data.s_mesurement_address.mes_current_double);
+#ifdef CALC_LINE
+	processing_mesurement_calc_calib_data_line(ps_globall_buff->s_buff_rez_current.rez_mes, &middle_rez);
+#else
 	processing_mesurement_calc_calib_data(ps_globall_buff->s_buff_rez_current.rez_mes, &middle_rez);
+#endif
 	middle_rez*=1;
 	rez=(u16)middle_rez;
 	processing_mem_map_write_s_proces_object_modbus(&rez,NUM_REG_REZ_U16,s_address_oper_data.s_mesurement_address.rez_mes_current);
@@ -276,13 +294,8 @@ static void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 }
 
 
-
-extern  S_dma_m2m dma_m2m_status;
 //---------------задача processing_mesurement_task ------------------
 void processing_mesurement_task(S_globall_buff * ps_globall_buff){
-	DMA_M2M_STATYS qw=1;
-	DMA_M2M_STATYS qw1=1;
-	u8 asd=0;
 	volatile static uint8_t f_begin_mesurement=1;
 	//new rezult redy
 		GPIO_SetBits(GPIOB,GPIO_Pin_9);
@@ -367,6 +380,8 @@ void t_processing_mesurement(void *pvParameters){
 	 processing_mes_adc_set_dma_callback(&processing_mes_adc_buff_full_callback);
 	//конфигурация АЦП+ДМА, ДМА(М2М), ЦОС(коєффициенты фильтра)
 	processing_mesurement_global_config(&s_global_buff);
+	// Рассчет коэффициентов прямой
+	processing_mesurement_calib_init();
 
 
 	while(1)

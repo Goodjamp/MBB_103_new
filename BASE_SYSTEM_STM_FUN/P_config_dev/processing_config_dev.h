@@ -156,7 +156,7 @@ typedef struct{
 #endif
 
 	S_ulist_modbus s_ulist_modbus[NUM_PORT_MODBUS*MAX_NUM_MODBUS_REQ];
-}S_config_moduls;
+} S_config_moduls;
 
 // структура конфигурации устройства
 typedef struct{

@@ -287,6 +287,8 @@ void default_config_table(S_global_config *ps_mem_data_set) {
 	ps_mem_data_set->s_config_moduls.s_routing_data_user_config.s_data_rout[49].address_to = 0;
 
 
+	ps_mem_data_set->s_config_moduls.s_mesurement_user_config.state=ENABLE;
+	ps_mem_data_set->s_config_moduls.s_mesurement_user_config.frequency=50;
 
 
 	//-------------------------------------------------------------------------------

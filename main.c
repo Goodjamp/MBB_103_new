@@ -296,8 +296,6 @@ int main(void)
 // задача управления процесом програмной презагрузки и световой индикации режима работы
 	xTaskCreate(  t_processing_reset_control, ( signed char * ) "WatcDogTask", 70,	NULL, 4, NULL );
 
-	u16 mem_size;
-	mem_size=xPortGetFreeHeapSize();
 	//--------------НУ ..... ЗАПУСКАЮ ПЛАНИРОВЩИК-------------И ПОЛЕТЕЛИ!!!!!!!!!!-----------------------------
 	vTaskStartScheduler();
 
