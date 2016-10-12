@@ -195,12 +195,12 @@ static MES_STATUS processing_mesurement_calc_calib_data(double mes_cod, double *
 // функция processing_mesurement_update_rez -
 // входные аргументы:
 //
-static void processing_mesurement_update_rez(S_buff_rez *ps_data_staruct,double_t *p_new_data){
+static void processing_mesurement_update_rez(S_buff_rez *ps_data_struct,double_t *p_new_data){
 	double_t last_item;
-	fifo_read(&ps_data_staruct->steck_rez,1,&last_item);
-	ps_data_staruct->temp_sum-=last_item;
-	ps_data_staruct->temp_sum+=(*p_new_data);
-	fifo_write(&ps_data_staruct->steck_rez,1,p_new_data);
+	fifo_read(&ps_data_struct->steck_rez,1,&last_item);
+	ps_data_struct->temp_sum-=last_item;
+	ps_data_struct->temp_sum+=(*p_new_data);
+	fifo_write(&ps_data_struct->steck_rez,1,p_new_data);
 }
 
 
@@ -224,7 +224,7 @@ static void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 	u16 rez;
 	for(;p_im_rez<=p_last_item;){
 		//рассчитываю ток
-		temp_var=(double_t)(*p_re_rez)*(double_t)(*p_re_rez);//+(double_t)(*p_im_rez)*(double_t)(*p_im_rez);
+		temp_var=(double_t)(*p_re_rez)*(double_t)(*p_re_rez);
 		temp_var+=(double_t)(*p_im_rez)*(double_t)(*p_im_rez);
 		temp_var=sqrt(temp_var);
 		temp_sum_current+=temp_var;
@@ -250,6 +250,7 @@ static void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 		p_im_rez+=2;
 	}
 
+	//накопление результатов в буффере перед началом измерений
 	if(fifo_read_available(&ps_globall_buff->s_buff_rez_current.steck_rez) < REZ_BUFF_SIZE){
 		// ---------накопительный буффер тока-----------------------------
 		fifo_write(&ps_globall_buff->s_buff_rez_current.steck_rez,1,&temp_sum_current);
@@ -260,29 +261,21 @@ static void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 		return;
 	}
 
-	// --------------------расчитываю ток --------------------
+	// --------------------РАССЧИТЫВАЮ ДЕЙСТВИТЕЛЬНОЕ ЗНАЧЕНИЕ ТОКА --------------------
 	processing_mesurement_update_rez(&ps_globall_buff->s_buff_rez_current,&temp_sum_current);
 	ps_globall_buff->s_buff_rez_current.rez_mes=(double_t)((double_t)ps_globall_buff->s_buff_rez_current.temp_sum/(double_t)(REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF));
-
-	// проверяю на порог 3*сигма
-	/*
-	if((ps_globall_buff->s_buff_rez_current.rez_mes <(last_mes_mem+_3_SIGMA))&&
-	   (ps_globall_buff->s_buff_rez_current.rez_mes >(last_mes_mem-_3_SIGMA))){
-		return;
-	}
-	 */
 	last_mes_mem=ps_globall_buff->s_buff_rez_current.rez_mes;
-	//записываю "сырой", не калиброванныц, код измренного тока
+	//записываю "сырой", не калиброванный, код измеренного тока
 	processing_mem_map_write_s_proces_object_modbus((u16*)&ps_globall_buff->s_buff_rez_current.rez_mes,NUM_REG_REZ_DOUBLE,s_address_oper_data.s_mesurement_address.mes_current_double);
-#ifdef CALC_LINE
+	//выбираю способ рассчета действительго значения тока
+#ifdef CALC_LINE_TYPE
 	processing_mesurement_calc_calib_data_line(ps_globall_buff->s_buff_rez_current.rez_mes, &middle_rez);
 #else
 	processing_mesurement_calc_calib_data(ps_globall_buff->s_buff_rez_current.rez_mes, &middle_rez);
 #endif
-	middle_rez*=1;
 	rez=(u16)middle_rez;
 	processing_mem_map_write_s_proces_object_modbus(&rez,NUM_REG_REZ_U16,s_address_oper_data.s_mesurement_address.rez_mes_current);
-	// --------------------расчитываю частоту --------------------
+	// ----------------------РАССЧИТЫВАЮ ЧАСТОТУ---------------------------------------
 	processing_mesurement_update_rez(&ps_globall_buff->s_buff_rez_frequency,&temp_sum_dl);
 	middle_rez=(double_t)ps_globall_buff->s_buff_rez_frequency.temp_sum/(double_t)(REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF-REZ_BUFF_SIZE);
 	// синус центрального угла
