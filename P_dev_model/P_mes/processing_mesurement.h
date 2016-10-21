@@ -20,6 +20,12 @@
 //МЕТОД РАСЧЕТА РЕЗУЛЬТАТОВ ИЗМЕРЕНИЙ
 #define CALC_LINE_TYPE
 
+//Порог на запись результатов измерений тока, мА
+#define CURRENTTHRESHOLD  40
+//счетчик гистерезиса для перехода в режим измерений (из режима без тока)
+#define GISTCOUNTER  50
+//счетчик мерцания индикатора состояния в состоянии MES_DOWN_CALIB_RANGE
+#define LEDBLINCCOUNTER  20
 // --------------ПАРАМЕТРЫ БУФФЕРОВ АЦП----------------
 //Полный размер буффера
 #define ADC_BUFFER_SIZE_FULL  40
@@ -54,16 +60,24 @@
 // максимальный размер структуры калибровочных данных
 #define CALIB_DATA_MAX_SIZE   100
 
+// Пин индикатора состояния
+#define LED_STATE_IND_PIN GPIO_Pin_9
+// Порт индикатора состояния
+#define LED_STATE_IND_PORT GPIOB
+
+// Макроси для доступа к калибровочной кривой
 #define KOD_VAL(X)     s_calib_current.calib_curve[X][0]
 #define CURRENT_VAL(X) s_calib_current.calib_curve[X][1]
 
 //
 typedef enum{
-	MES_OK=0,
-	MES_OUT_OF_CALIB_RAMGE=1
+	MES_OK=0,                   //измерения выполнены успешно
+	MES_OFF,                    // модуль отключен в конфигурации
+	MES_DOWN_THRESHOLD_RANGE,   //токменше порога детектирования наличия тока
+	MES_UP_CALIB_RANGE          //код результатов превысил Верхний порог
 }MES_STATUS;
 
-
+//
 typedef struct{
 	S_fifo_steak steck_rez;
 	//double_t *p_buff_summ;//[REZ_BUFF_SIZE];
@@ -89,13 +103,12 @@ typedef struct{
 
 // Структура с калибровочными данными
 typedef struct{
-	u32 num_point;
-	double calib_curve[CALIB_DATA_MAX_SIZE][2];
+	u32 num_point;                               // количество точек калибровки
+	double calib_curve[CALIB_DATA_MAX_SIZE][2];  // масив точек калибровки
 }S_calib;
 
 
 void check_filter(S_globall_buff * ps_globall_buff);
 void data_operation_sin(u16 *pa_sin, u16 length, float f1, float Am, float fi,float Fadc);
-void processing_mesurement_task(S_globall_buff * ps_globall_buff);
 
 #endif

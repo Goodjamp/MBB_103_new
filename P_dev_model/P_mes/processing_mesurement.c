@@ -8,6 +8,8 @@
 #include "processing_mesurement.h"
 #include "processing_mesurement_extern.h"
 #include "processing_mem_map_extern.h"
+#include "init_system.h"
+
 #include "stm32f10x_gpio.h"
 #include "stm32f10x_rcc.h"
 #include "math.h"
@@ -22,6 +24,10 @@
 const S_calib s_calib_current={
 	#include "processing_mes_calib_current.h"
 };
+// Текущий статус результатов измерений
+static u16 rezMesStatus;
+// Общая структура настроек пользователя модуля ТY
+S_mesurement_user_config *ps_mesurement_user_config;
 
 S_globall_buff s_global_buff;
 
@@ -29,8 +35,6 @@ double buff_sum_rez_current[REZ_BUFF_SIZE];
 double buff_summ_rez_frequency[REZ_BUFF_SIZE];
 static double K_line;
 static double B_line;
-
-
 
 static xSemaphoreHandle SemphrADCBuffFull;
 extern S_address_oper_data s_address_oper_data;
@@ -178,6 +182,10 @@ static MES_STATUS processing_mesurement_calc_calib_data_line(double mes_cod, dou
 //
 static MES_STATUS processing_mesurement_calc_calib_data(double mes_cod, double *rez_current){
 	u8 counter;
+	if( *rez_current < KOD_VAL(0))
+	{
+		return MES_DOWN_THRESHOLD_RANGE;
+	}
 	for(counter=0;counter<(s_calib_current.num_point-1);counter++){
 		//ищем диапазон значений калибровки кода в котором находиться запрашиваимый код
 		if((mes_cod >= KOD_VAL(counter))&&(mes_cod < KOD_VAL(counter+1))){
@@ -187,7 +195,7 @@ static MES_STATUS processing_mesurement_calc_calib_data(double mes_cod, double *
 			return MES_OK;
 		}
 	}
-	return MES_OUT_OF_CALIB_RAMGE;
+	return MES_UP_CALIB_RANGE;
 }
 
 
@@ -203,6 +211,76 @@ static void processing_mesurement_update_rez(S_buff_rez *ps_data_struct,double_t
 	fifo_write(&ps_data_struct->steck_rez,1,p_new_data);
 }
 
+//---------------функция processing_mesurement_indication ------------------
+// функция processing_mesurement_indication - индикация процесса статуса измерения:
+// - модуль отключен
+// - ток менше порога
+// - нормальный режим
+static void processing_mesurement_indication(u16 mesCurrent)
+{
+	static struct S_1
+	{
+		u8 counterGist;
+		u8 counterIndication;
+	}ledStateIndication =
+	{
+			.counterGist=0,
+			.counterIndication=0
+	};
+
+	// если измеренный ток менше порога детекции присутствия тока
+	if( mesCurrent < CURRENTTHRESHOLD )
+	{
+		rezMesStatus = MES_DOWN_THRESHOLD_RANGE;
+		ledStateIndication.counterGist=0;
+	}
+	// если измеренный ток БОЛЬШЕ порога детекции присутствия тока И
+	// МЕНШЕ максильного тока калибровочной кривой
+	if((mesCurrent > CURRENTTHRESHOLD) &&
+			(mesCurrent < CURRENT_VAL(s_calib_current.num_point-1))
+	   )
+	{
+		if(rezMesStatus == MES_DOWN_THRESHOLD_RANGE)
+			{
+				ledStateIndication.counterGist++;
+				if(ledStateIndication.counterGist >= GISTCOUNTER)
+				{
+					rezMesStatus = MES_OK;
+					ledStateIndication.counterGist=0;
+				}
+			}
+		else
+		{
+			rezMesStatus = MES_OK;
+		}
+	}
+	// если измеренный ток больше максильного тока калибровочной кривой
+	if(mesCurrent > CURRENT_VAL(s_calib_current.num_point-1))
+	{
+		rezMesStatus = MES_UP_CALIB_RANGE;
+	}
+	//обновление индикации
+	switch(rezMesStatus)
+	{
+		case MES_OK:
+		case MES_UP_CALIB_RANGE:
+			GPIO_SetBits(LED_STATE_IND_PORT,LED_STATE_IND_PIN);
+			break;
+		case MES_DOWN_THRESHOLD_RANGE:
+			ledStateIndication.counterIndication++;
+			if(ledStateIndication.counterIndication > LEDBLINCCOUNTER)
+			{
+				ledStateIndication.counterIndication = 0;
+				//Inverse led pin
+				(GPIO_ReadOutputDataBit(LED_STATE_IND_PORT,LED_STATE_IND_PIN)) ?
+						(GPIO_SetBits(LED_STATE_IND_PORT,LED_STATE_IND_PIN)):
+						(GPIO_ResetBits(LED_STATE_IND_PORT,LED_STATE_IND_PIN));
+			}
+			break;
+		default: break;
+	}
+
+}
 
 //---------------функция processing_mesurement_calc ------------------
 // функция processing_mesurement_calc - выполняет расчет значений измеренных величин (ток и частота)
@@ -210,13 +288,11 @@ static void processing_mesurement_update_rez(S_buff_rez *ps_data_struct,double_t
 // входные аргументы:
 //*ps_globall_buff - указатель на структуру в которой описаны все єлементы задачи измерений
 static void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
-	static double last_mes_mem=_3_SIGMA;
 	u8 secon_order=0;
 	double_t x_0, x_1, y_0, y_1, dx, dy, dl, temp_sum_dl=0;
 	u8 k_1=0;
 	double_t temp_var=0;
 	double_t temp_sum_current=0;
-	double_t last_item;
 	s32 *p_last_item=&ps_globall_buff->buff_rez_filtring[ADC_BUFFER_SIZE_HALF*2-1];
 	s32 *p_re_rez=&ps_globall_buff->buff_rez_filtring[0];
 	s32 *p_im_rez=&ps_globall_buff->buff_rez_filtring[1];
@@ -262,9 +338,15 @@ static void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 	}
 
 	// --------------------РАССЧИТЫВАЮ ДЕЙСТВИТЕЛЬНОЕ ЗНАЧЕНИЕ ТОКА --------------------
+	//если код измеренного тока больше порога - выход
+	if(((temp_sum_current/ADC_BUFFER_SIZE_HALF) > KOD_VAL(s_calib_current.num_point-1)*2 )||
+	   ((temp_sum_current/ADC_BUFFER_SIZE_HALF) < 0 )
+	)
+	{
+		return;
+	}
 	processing_mesurement_update_rez(&ps_globall_buff->s_buff_rez_current,&temp_sum_current);
 	ps_globall_buff->s_buff_rez_current.rez_mes=(double_t)((double_t)ps_globall_buff->s_buff_rez_current.temp_sum/(double_t)(REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF));
-	last_mes_mem=ps_globall_buff->s_buff_rez_current.rez_mes;
 	//записываю "сырой", не калиброванный, код измеренного тока
 	processing_mem_map_write_s_proces_object_modbus((u16*)&ps_globall_buff->s_buff_rez_current.rez_mes,NUM_REG_REZ_DOUBLE,s_address_oper_data.s_mesurement_address.mes_current_double);
 	//выбираю способ рассчета действительго значения тока
@@ -274,7 +356,16 @@ static void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 	processing_mesurement_calc_calib_data(ps_globall_buff->s_buff_rez_current.rez_mes, &middle_rez);
 #endif
 	rez=(u16)middle_rez;
+	// Обновляю поточное состояние и индикацию
+	processing_mesurement_indication(rez);
+	if((rezMesStatus == MES_DOWN_THRESHOLD_RANGE) || (rezMesStatus == MES_OFF))
+	{
+		rez=(u16)0;
+	}
+	// записываю измеренное значения тока
 	processing_mem_map_write_s_proces_object_modbus(&rez,NUM_REG_REZ_U16,s_address_oper_data.s_mesurement_address.rez_mes_current);
+	// записываю поточный новый статус
+	processing_mem_map_write_s_proces_object_modbus(&rezMesStatus,NUM_REG_REZ_U16,s_address_oper_data.s_mesurement_address.status_mesurement);
 	// ----------------------РАССЧИТЫВАЮ ЧАСТОТУ---------------------------------------
 	processing_mesurement_update_rez(&ps_globall_buff->s_buff_rez_frequency,&temp_sum_dl);
 	middle_rez=(double_t)ps_globall_buff->s_buff_rez_frequency.temp_sum/(double_t)(REZ_BUFF_SIZE*ADC_BUFFER_SIZE_HALF-REZ_BUFF_SIZE);
@@ -288,7 +379,7 @@ static void processing_mesurement_calc(S_globall_buff * ps_globall_buff){
 
 
 //---------------задача processing_mesurement_task ------------------
-void processing_mesurement_task(S_globall_buff * ps_globall_buff){
+static void processing_mesurement_task(S_globall_buff * ps_globall_buff){
 	volatile static uint8_t f_begin_mesurement=1;
 	//new rezult redy
 		GPIO_SetBits(GPIOB,GPIO_Pin_9);
@@ -356,26 +447,42 @@ void processing_mes_adc_buff_full_callback(void){
 	xSemaphoreGiveFromISR(SemphrADCBuffFull,&priority);
 }
 
+
+static void processing_mes_gpio_config(void)
+{
+	GPIO_InitTypeDef gpio_mes_led_ind;
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB,ENABLE);
+	gpio_mes_led_ind.GPIO_Mode=GPIO_Mode_Out_PP;
+	gpio_mes_led_ind.GPIO_Pin=LED_STATE_IND_PIN;
+	gpio_mes_led_ind.GPIO_Speed=GPIO_Speed_2MHz;
+	GPIO_Init(LED_STATE_IND_PORT,&gpio_mes_led_ind);
+	GPIO_ResetBits(GPIOB,LED_STATE_IND_PIN);
+}
+
+
+INIT_MBB_Rezult processing_mes_fill_S_mesurement(u8 *configData) {
+	ps_mesurement_user_config = (S_mesurement_user_config*)configData;
+	return MBB_INIT_OK;
+}
+
 void t_processing_mesurement(void *pvParameters){
 
-	GPIO_InitTypeDef gpio_service;
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB,ENABLE);
-	gpio_service.GPIO_Mode=GPIO_Mode_Out_PP;
-	gpio_service.GPIO_Pin=GPIO_Pin_9;
-	gpio_service.GPIO_Speed=GPIO_Speed_2MHz;
-	GPIO_Init(GPIOB,&gpio_service);
-	GPIO_ResetBits(GPIOB,GPIO_Pin_9);
-
-	//S_globall_buff s_global_buff;
+	//Сохраняю глобальные настройки модуля измерений
+	processing_mes_fill_S_mesurement((u8*)pvParameters);
+	if(ps_mesurement_user_config->state == DISABLE)
+	{
+		while(1){};
+	}
+	//Конфигурация GPIO
+	processing_mes_gpio_config();
 	// Семафор для разблокировки задачи обработки результатов АЦП по факту
     // заполнения буффера АЦП
-	 vSemaphoreCreateBinary(SemphrADCBuffFull);
-	 processing_mes_adc_set_dma_callback(&processing_mes_adc_buff_full_callback);
+	vSemaphoreCreateBinary(SemphrADCBuffFull);
+	processing_mes_adc_set_dma_callback(&processing_mes_adc_buff_full_callback);
 	//конфигурация АЦП+ДМА, ДМА(М2М), ЦОС(коєффициенты фильтра)
 	processing_mesurement_global_config(&s_global_buff);
 	// Рассчет коэффициентов прямой
 	processing_mesurement_calib_init();
-
 
 	while(1)
     {
