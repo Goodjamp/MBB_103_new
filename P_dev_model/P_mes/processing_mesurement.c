@@ -157,6 +157,10 @@ static void processing_mesurement_calib_init(void){
 	K_line=(s_calib_current.num_point*sum_xy-sum_x*sum_y)/
 			(s_calib_current.num_point*sum_x2-sum_x*sum_x);
 	B_line=(sum_y-K_line*sum_x)/s_calib_current.num_point;
+	// Set new coefficient after calibration ()
+  //K_line = 0.00005490203786;
+	K_line = 0.00005494468441;
+	B_line = -0.891978138567753;
 }
 
 
@@ -460,7 +464,7 @@ static void processing_mes_gpio_config(void)
 }
 
 
-INIT_MBB_Rezult processing_mes_fill_S_mesurement(u8 *configData) {
+static INIT_MBB_Rezult processing_mes_fill_S_mesurement(u8 *configData) {
 	ps_mesurement_user_config = (S_mesurement_user_config*)configData;
 	return MBB_INIT_OK;
 }

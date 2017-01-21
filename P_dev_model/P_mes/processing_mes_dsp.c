@@ -457,7 +457,7 @@ u16 data_processing_calc_num_shift_data(u8 w, u16 Q, u16 N){
 // - к-во результатов
 u16 data_processing_calc_num_rez(u8 w, u16 Q, u16 N){
 	if(Q<w){return 0;}
-	return (N - Q )/ w+1;;
+	return (N - Q )/w + 1;
 }
 
 // -----------calc_num_need_adc_rez-----------
