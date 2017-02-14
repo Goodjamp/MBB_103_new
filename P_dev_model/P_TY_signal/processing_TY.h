@@ -37,9 +37,9 @@
 #define PORT_TY_REL3       GPIOA
 #define PORT_TY_REL4       GPIOB
 // порт входа проверки наличия напряжения оперативного тока
-// (плата из сгоревшим входом PA1)
-#define PORT_V_INPUT       GPIOB
-//#define PORT_V_INPUT       GPIOA
+// (плата из сгоревшим входом PA1 GPIOB)
+// #define PORT_V_INPUT       GPIOB
+#define PORT_V_INPUT       GPIOA
 // порты выходов проверки состояния обмотки релле
 #define PORT_CHK_COIL1      GPIOB
 #define PORT_CHK_COIL2      GPIOB
@@ -58,8 +58,8 @@
 #define PIN_TY_REL4       GPIO_Pin_15
 // пин входа проверки наличия напряжения оперативного тока
 // (плата из сгоревшим входом PA1)
-#define PIN_V_INPUT       GPIO_Pin_12
-//#define PIN_V_INPUT       GPIO_Pin_1
+// #define PIN_V_INPUT       GPIO_Pin_12
+#define PIN_V_INPUT       GPIO_Pin_1
 
 // пины выходов проверки состояния обмотки релле
 #define PIN_CHK_COIL1      GPIO_Pin_7
@@ -82,6 +82,9 @@
 //---------------------------------УСТАНОВКИ ХАРАКТЕРИСТИК ПЕРЕКЛЮЧЕНИЯ МЕХАНИЧЕСКИХ РЕЛЛЕ-------------------------------------------
 // Время переходного процеса комутации механического релле, мс
 #define TIME_REL_COMUTATION   10
+
+// Время устранения дребезга котактов (для комутаций без проверки), мс
+#define TIME_BOUNCE_REL      30
 
 // Время переходного процеса комутации электрического силового ключа, мс
 #define TIME_ELEKTRIK_KEY_COMUTATION   15

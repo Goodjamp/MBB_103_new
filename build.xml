@@ -74,7 +74,6 @@
       <includepath path="FreeRTOS_Source/portable/GCC/ARM_CM3"/>
       <includepath path="USART_OPERATION"/>
       <includepath path="P_dev_model/P_TC_signal"/>
-      <includepath path="P_dev_model/P_TY_signal"/>
       <includepath path="P_dev_model"/>
       <includepath path="P_dev_model/P_mes"/>
       <includepath path="P_dev_model/P_simple_gpio"/>
@@ -87,6 +86,7 @@
       <includepath path="BASE_SYSTEM_STM_FUN/Processing_Source"/>
       <includepath path="BASE_SYSTEM_STM_FUN/P_reset_control"/>
       <includepath path="P_dev_model/P_mes/FIFO"/>
+      <includepath path="P_dev_model/P_TY_signal"/>
       
       <!-- arm-none-eabi-gcc compiler arguments -->
       <compilerarg value="-mcpu=cortex-m3"/>

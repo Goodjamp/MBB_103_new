@@ -233,16 +233,14 @@ static void processing_mesurement_indication(u16 mesCurrent)
 	};
 
 	// если измеренный ток менше порога детекции присутствия тока
-	if( mesCurrent < CURRENTTHRESHOLD )
+	if( mesCurrent < CURRENTTHRESHOLD_DOWN )
 	{
 		rezMesStatus = MES_DOWN_THRESHOLD_RANGE;
 		ledStateIndication.counterGist=0;
 	}
 	// если измеренный ток БОЛЬШЕ порога детекции присутствия тока И
 	// МЕНШЕ максильного тока калибровочной кривой
-	if((mesCurrent > CURRENTTHRESHOLD) &&
-			(mesCurrent < CURRENT_VAL(s_calib_current.num_point-1))
-	   )
+	if((mesCurrent > CURRENTTHRESHOLD_DOWN) && (mesCurrent < CURRENTTHRESHOLD_UP))
 	{
 		if(rezMesStatus == MES_DOWN_THRESHOLD_RANGE)
 			{
@@ -259,7 +257,7 @@ static void processing_mesurement_indication(u16 mesCurrent)
 		}
 	}
 	// если измеренный ток больше максильного тока калибровочной кривой
-	if(mesCurrent > CURRENT_VAL(s_calib_current.num_point-1))
+	if(mesCurrent > CURRENTTHRESHOLD_UP)
 	{
 		rezMesStatus = MES_UP_CALIB_RANGE;
 	}
@@ -268,7 +266,7 @@ static void processing_mesurement_indication(u16 mesCurrent)
 	{
 		case MES_OK:
 		case MES_UP_CALIB_RANGE:
-			GPIO_SetBits(LED_STATE_IND_PORT,LED_STATE_IND_PIN);
+			GPIO_ResetBits(LED_STATE_IND_PORT,LED_STATE_IND_PIN);
 			break;
 		case MES_DOWN_THRESHOLD_RANGE:
 			ledStateIndication.counterIndication++;
@@ -277,8 +275,8 @@ static void processing_mesurement_indication(u16 mesCurrent)
 				ledStateIndication.counterIndication = 0;
 				//Inverse led pin
 				(GPIO_ReadOutputDataBit(LED_STATE_IND_PORT,LED_STATE_IND_PIN)) ?
-						(GPIO_SetBits(LED_STATE_IND_PORT,LED_STATE_IND_PIN)):
-						(GPIO_ResetBits(LED_STATE_IND_PORT,LED_STATE_IND_PIN));
+						(GPIO_ResetBits(LED_STATE_IND_PORT,LED_STATE_IND_PIN)):
+						(GPIO_SetBits(LED_STATE_IND_PORT,LED_STATE_IND_PIN));
 			}
 			break;
 		default: break;
@@ -460,7 +458,7 @@ static void processing_mes_gpio_config(void)
 	gpio_mes_led_ind.GPIO_Pin=LED_STATE_IND_PIN;
 	gpio_mes_led_ind.GPIO_Speed=GPIO_Speed_2MHz;
 	GPIO_Init(LED_STATE_IND_PORT,&gpio_mes_led_ind);
-	GPIO_ResetBits(GPIOB,LED_STATE_IND_PIN);
+	GPIO_SetBits(GPIOB,LED_STATE_IND_PIN);
 }
 
 
@@ -495,8 +493,6 @@ void t_processing_mesurement(void *pvParameters){
 		GPIO_SetBits(GPIOB,GPIO_Pin_9);
 
     	processing_mesurement_task(&s_global_buff);
-
-    	GPIO_ResetBits(GPIOB,GPIO_Pin_9);
     }
 
 }

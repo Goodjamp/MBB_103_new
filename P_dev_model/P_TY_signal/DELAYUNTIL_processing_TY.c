@@ -367,7 +367,7 @@ TY_REZ_CHECK processing_TY_signal_check_coil(void) {
 	// - после прохождения времени переходного процеса, считываю значения на входах проверки состояния
 	//   котушек.
 	// результаты считывания записываю в поле rez_check_TY. если в результате проверки
-	// получены значени 0b01 или 0b10 - котушка исправне, если 0b00(ERROR_XX) или 0b11(ERROR_K3) - котушкаа
+	// получены значени 0b01 или 0b10 - котушка исправне, если 0b00(ERROR_XX) или 0b11(ERROR_K3) - котушка
 	// повреждена
 	for(counter=0;counter<s_ty_coil_check_grup.num_check_TY;counter++){
 		if((s_ty_coil_check_grup.s_TY_is_check[counter].rez_check_TY==ERROR_XX)||
@@ -744,7 +744,12 @@ void processing_TY_signal_DP_TY(u8 num_ty, S_state_TY* p_status_TY) {
 		return;
 	}
 
-	//--------- ВЫПОЛНИТЬ ОПЕРАЦИЮ ВКЛЮЧЕНИЯ ГУПОВОГО РЕЛЛЕ ---------------
+	//таймаут на включение механического релле, если проверки состояния цепей ТУ отключены
+	if(s_ty_coil_check_grup.f_limit_check){
+		vTaskDelay(TIME_BOUNCE_REL);
+	}
+
+	//--------- ВЫПОЛНИТЬ ОПЕРАЦИЮ ВКЛЮЧЕНИЯ ГРУПОВОГО РЕЛЛЕ ---------------
 	// включить груповое релле
 	TY_SET_OUT(PORT_GRYP_REL, PIN_GRYP_REL);
 	// выполнить проверку включения групового релле
@@ -754,8 +759,6 @@ void processing_TY_signal_DP_TY(u8 num_ty, S_state_TY* p_status_TY) {
 		return;
 	}
 
-	// Запускаю таймер для отсчета времени равного длине импульса ТУ типа DP
-	//TIM_Cmd(TIM2,ENABLE);
 	//фиксирую время начала выполнения команды
 	portTickType time_start=xTaskGetTickCount();
 	u16 counter=0;

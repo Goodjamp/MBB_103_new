@@ -79,7 +79,6 @@ u8 processing_mem_map_init_mem_map(void) {
 #ifdef DEV_4
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
 	temp_address=CALC_ADDRESS_OPER_REG_PROCESSING(DEV_4,temp_address);
-
 #endif
 #ifdef DEV_5
 	// вызываю ф-ю рассчета адресов оперативных регистров устройства (адреса пользователя)
