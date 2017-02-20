@@ -174,7 +174,7 @@ u16 ModMasterResTrs(S_Task_parameters *ptaskparameters, u8 *buf_in,
 	// ожидаю прием ответа и нализирую к-во принятых байт
 	//--------!!!!!!!!!!!!!!!!!!!!!!ДОБАВИТЬ АНАЛИЗ НА ПРИЕМ ИСКЛЮЧЕНИЯ !!!!!!!!!!!!!!!!!!!!!!------------------
 	NumberRead= ReadUSART(ptaskparameters->RdUSART, (u8*) ps_modbus_res,NumberByteResponse, pconnectmodbus->waitresp);
-	if ((NumberByteResponse!= NumberRead)&&(SIZE_EXCEPTION!= NumberRead)) {// если ожжидаемое к-во считанных байт не равно реальнго считанным, два варианта:
+	if ((NumberByteResponse!= NumberRead)&&(SIZE_EXCEPTION!= NumberRead)) {// если ожидаемое к-во считанных байт не равно реальнго считанным, два варианта:
 		//ОШИБКА
 		return REQ_MASTER_ERROR; // ответ - ошибка
 	};
@@ -214,7 +214,7 @@ void t_Modbus_MASTER(void *p_task_par) {
 	ptaskparameters = ((S_modbus_tsk_par*)p_task_par)->ps_task_parameters;
 	number_port =  ((S_modbus_tsk_par*)p_task_par)->num_modbus;
 	// основной цикл задачи
-	vTaskDelay(500); //таймаут переда стартом всех задач, для валидации данных в картепамяти
+	vTaskDelay(500); //таймаут перед стартом всех задач, для валидации данных в карте памяти
 	while (1) {
 
 		for (number_req = 0;number_req< ps_connectmodbus_global[number_port].number_of_pribor;number_req++) //циклический опрос запросами порта
@@ -228,7 +228,7 @@ void t_Modbus_MASTER(void *p_task_par) {
 			};
 			s_list_madbus_req[number_port].s_ulist_req_modbus[number_req].error_req_counter=0;
 
-			Clrinbuf(ptaskparameters, 200); // очищаю входной буфер ЮЗАРТа (Архитектура - ОДИН ПОРТА -> ОДНА ЗАДАЧА), перейти к (ОДИН ПРОТОКОЛ -> ОДНА ЗАДАЧА)
+			Clrinbuf(ptaskparameters, 200); // очищаю входной буфер ЮЗАРТа (Архитектура - ОДИН ПОРТ -> ОДНА ЗАДАЧА)
 
 			// передаю запрос и анализирую ответ
 			// Результат запроса записываю в структуру настроек запроса
@@ -239,17 +239,20 @@ void t_Modbus_MASTER(void *p_task_par) {
 
 		}
 		// анализирую статусы всех запросов и обновляю статус порта (когда заканчиваеться цикл опроса всех устройств на линии)
-		port_status = 0xffff;
+
+		port_status = ps_connectmodbus_global[number_port].number_of_pribor == 0 ?  0 : 0xffff;
+
 		for (k1 = 0; k1 < ps_connectmodbus_global[number_port].number_of_pribor; k1++) // опрашиваю статусы всех запросов порта
 		{
 			processing_mem_map_read_s_proces_object_modbus(&req_status, 1,s_list_madbus_req[number_port].s_ulist_req_modbus[k1].ps_ulist_modbus->adres_status);
 			port_status = (req_status & port_status);
 		}
 
+
 		// если все устройсва на данной линии не отвечают, выставляю статус порта
 		if (port_status) {
 			processing_mem_map_write_s_proces_object_modbus(&port_status, 1,s_address_oper_data.s_modbus_address.status_PORT + number_port);
-		//выполнить запись в общий статус-регистр состояния устройства
+			//выполнить запись в общий статус-регистр состояния устройства
 			processing_reset_control_set_dev_error(number_port,SET);
 		}
 		else{
