@@ -35,7 +35,8 @@ uint16_t write_Usart_Buf(USART_TypeDef* USARTx, uint8_t *bufuchar,
 	int b;
 
 	i = 0;
-	while (i < lenmassive) {
+	while (i < lenmassive)
+	{
 		do {
 			if ((*(bufuchar + i) < 0x30) || (*(bufuchar + i) > 0x39)) {
 			}
@@ -68,8 +69,7 @@ uint16_t write_Usart_Buf(USART_TypeDef* USARTx, uint8_t *bufuchar,
 	return i;
 }
 
-int write_fastdirstruct_usart(struct point_wrdirobject *pwrdirobject,
-		unsigned char singlchar) {
+int write_fastdirstruct_usart(struct point_wrdirobject *pwrdirobject, unsigned char singlchar) {
 	unsigned char *pobject;
 	unsigned short pwrite;
 	unsigned short ocenka;
@@ -77,8 +77,8 @@ int write_fastdirstruct_usart(struct point_wrdirobject *pwrdirobject,
 	pobject = pwrdirobject->pBuf_UsartOut;
 	pwrite = pwrdirobject->pointwrite;
 	ocenka = pwrite;
-	if ((pwrdirobject->num_write >= pwrdirobject->size_wait_point_read)
-			&& (pwrdirobject->pointwrite != pwrdirobject->pointread)) {
+	if ((pwrdirobject->num_write >= pwrdirobject->size_wait_point_read)	&& (pwrdirobject->pointwrite != pwrdirobject->pointread))
+	{
 		ocenka++;
 		if (ocenka >= (pwrdirobject->size_buffer)) //Proverka na konec bufera
 			ocenka = 0;
@@ -168,7 +168,8 @@ int ReadUSART(struct point_wrdirobject *pwrdirobject, unsigned char *buffer,int 
 
 	//MaxTime=MaxTime*10000;
 
-	while ((n < MaxTime) && (n <= endtimesec) && (n >= 0)) {
+	while ( (n < MaxTime) && (n <= endtimesec) && (n >= 0) )
+	{
 		if ((SymbRead = Read_From(pwrdirobject, timebuf, numbyte - Numost))<= 0) // если USART не считано ни одного символа
 		{
 			n = counter_ms - start_counter; // increment time counter

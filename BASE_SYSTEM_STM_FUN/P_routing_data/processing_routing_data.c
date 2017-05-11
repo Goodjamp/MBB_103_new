@@ -71,7 +71,7 @@ void t_processing_routing_data(void *pvParameters) {
 	if(processing_mem_map_fill_S_route_table((u8*)pvParameters))// если проверка не пройдена - удалить задачу + аварийная сигнализация + ЗАПИСЬ В КАРТУ ПАМЯТИ !!!!
 	{
 		//processing_mem_map_write_s_proces_object_modbus(ERROR_OUT_MEM,1,s_address_oper_data.s_routing_data_address.status_routing_data);
-		SET_GLOBAL_STATUS(DEV_1);
+		SET_GLOBAL_STATUS(DEV_3);
 		vTaskDelete(NULL);
 	};
 

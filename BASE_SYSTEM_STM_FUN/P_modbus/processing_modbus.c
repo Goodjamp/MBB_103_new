@@ -532,14 +532,14 @@ REZ_REQ_CHEACK_SLAVE cheack_req_modbus(S_Task_parameters *p_iparameters,
 
 	//   ----ТИПОВАЯ ЧАСТЬ ПРОВЕРКИ (ДЛЯ ВСЕХ ТИПОВ ЗАПРОСОВ)-------------
 	// проверка на допустимые функции запроса
-	if ((ps_modbus_req_cheack->function != READ_COIL_STATUS)
-			& (ps_modbus_req_cheack->function != READ_INPUT_STATUS)
-			& (ps_modbus_req_cheack->function != READ_HOLDING_STATUS)
-			& (ps_modbus_req_cheack->function != READ_INPUT_REGISTERS)
-			& (ps_modbus_req_cheack->function != FORCE_SINGLE_COIL)
-			& (ps_modbus_req_cheack->function != FORSE_MULTIPLE_COILS)
-			& (ps_modbus_req_cheack->function != PRESET_SINGLE_REGISTERS)
-			& (ps_modbus_req_cheack->function != PRESET_MULTIPLE_REGISTERS)) {
+	if (	   (ps_modbus_req_cheack->function != READ_COIL_STATUS)
+			&& (ps_modbus_req_cheack->function != READ_INPUT_STATUS)
+			&& (ps_modbus_req_cheack->function != READ_HOLDING_STATUS)
+			&& (ps_modbus_req_cheack->function != READ_INPUT_REGISTERS)
+			&& (ps_modbus_req_cheack->function != FORCE_SINGLE_COIL)
+			&& (ps_modbus_req_cheack->function != FORSE_MULTIPLE_COILS)
+			&& (ps_modbus_req_cheack->function != PRESET_SINGLE_REGISTERS)
+			&& (ps_modbus_req_cheack->function != PRESET_MULTIPLE_REGISTERS)) {
 		return REQ_SLAVE_ERROR;
 	}
 	// проверяю адрес кому адресовано сообщение

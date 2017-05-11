@@ -853,6 +853,11 @@ u8 processing_TY_signal_chek_processing(F_check p_fun_chek,TY_REZ_CHECK paramite
 // num_ty      - номер комутируемого релле ТУ;
 void processing_TY_signal_disable_rellay(u8 num_ty) {
 	u8 num_paralel_ty;
+	// отключить груповое релле
+	TY_CLEAR_OUT(PORT_GRYP_REL, PIN_GRYP_REL);
+
+	vTaskDelay(10);
+
 	TY_CLEAR_OUT(s_rel_out[num_ty].port_operation,
 			s_rel_out[num_ty].pin_operation);
 	// паралельный канал комутируеться только с операцией ВЫКЛЮЧЕНИЯ
@@ -866,8 +871,7 @@ void processing_TY_signal_disable_rellay(u8 num_ty) {
 		// включаю релле паралельного канала !!!!!!
 	}
 
-	TY_CLEAR_OUT(PORT_GRYP_REL, PIN_GRYP_REL);
-	// отключить груповое релле
+
 }
 
 //---------------функция processing_TY_signal_SP_TY---------------
@@ -1061,7 +1065,7 @@ void t_processing_TY(void *pvParameters) {
 	if (processing_TY_fill_S_TY((u8*) pvParameters))
 	{
 		// делаю запись в статус регистр устройства
-		SET_GLOBAL_STATUS(DEV_3);
+		SET_GLOBAL_STATUS(DEV_2);
 		// выполняю запись в статус регистр ТУ
 
 		vTaskDelete(NULL); // если проверка не пройдена - удалить задачу + аврийная сигнализация + ЗАПИСЬ В КАРТУ ПАМЯТИ !!!!
@@ -1129,10 +1133,10 @@ void processing_TY_signal_update_TY_state(S_state_TY *ps_present) {
 	{
 		if(ps_present->status_TY)
 		{
-			SET_GLOBAL_STATUS(DEV_3);
+			SET_GLOBAL_STATUS(DEV_2);
 		}
 		else{
-			RESET_GLOBAL_STATUS(DEV_3);
+			RESET_GLOBAL_STATUS(DEV_2);
 		}
 	}
 	// Сравниваю регистры предыдущего состояния модуля ТУ и поточного, если найдено не совпадение - перезаписать ВСЕ регистры модуля ТУ

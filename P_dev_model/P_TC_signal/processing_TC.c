@@ -312,7 +312,7 @@ void t_processing_TC(void *pvParameters){
 	// сохраняю конфигурационные данные в указателе на структуру конфигурации,
 	// а также выпоняб проверку
 	if(processing_TC_fill_S_TS((u8*)pvParameters)){
-		SET_GLOBAL_STATUS(DEV_2);
+		SET_GLOBAL_STATUS(DEV_1);
 		vTaskDelete(NULL); // если проверка не пройдена - удалить задачу + аварийная сигнализация + ЗАПИСЬ В КАРТУ ПАМЯТИ !!!!
 	};
 
@@ -362,12 +362,12 @@ void t_processing_TC(void *pvParameters){
 			// если в статус регистр записано хоть одно значение, данные ТС не обновлять
 			if(tc_status_){
 				// выставить статус модуля ТС в глобальном статус-регистре
-				SET_GLOBAL_STATUS(DEV_2);
+				SET_GLOBAL_STATUS(DEV_1);
 				continue;
 			}
 			else{
 				// очистить статус модуля ТС в глобальном статус-регистре
-				RESET_GLOBAL_STATUS(DEV_2);
+				RESET_GLOBAL_STATUS(DEV_1);
 			}
 		}
 		// анализирую выполнялись ли операции с flesh памятью между опросами сериалайзера, если ДА

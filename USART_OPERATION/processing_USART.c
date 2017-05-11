@@ -285,7 +285,7 @@ USART_errort  ConfigureUSART(const S_port_config *ps_port_unit_config, USART_Typ
 			NVIC_EnableIRQ(USART6_IRQn);
 		}
 */
-	/* Configure USART Tx  as alternate function push-pull */
+	/* Configure USART Tx  as alternate function open-drain */
 	GPIO_InitStructure.GPIO_Pin = GPIO_USART_pin_TX;//
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_OD;
